@@ -1,0 +1,79 @@
+<view class="login-container">
+  <view class="login-header">
+    <text class="login-icon">🥬</text>
+    <text class="login-title">菜菜手帐</text>
+    <text class="login-subtitle">和TA一起，好好吃饭</text>
+  </view>
+
+  <view class="login-form">
+    <!-- 头像 - 简洁圆圈 -->
+    <button class="avatar-pick-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+      <image wx:if="{{avatarUrl}}" class="login-avatar-img" src="{{avatarUrl}}" mode="aspectFill" />
+      <view wx:else class="avatar-circle">
+        <text class="avatar-camera">📷</text>
+      </view>
+    </button>
+
+    <!-- 昵称 - 微信一键获取后自动填入 -->
+    <view class="nickname-group">
+      <input
+        class="nickname-input"
+        type="text"
+        value="{{nickname}}"
+        bindinput="onNicknameInput"
+        maxlength="12"
+        placeholder="微信登录后自动获取"
+      />
+    </view>
+
+    <!-- 协议勾选 - 自定义checkbox -->
+    <view class="agreement-row" bindtap="toggleAgree">
+      <view class="cb-circle {{agreed ? 'cb-checked' : ''}}">
+        <text wx:if="{{agreed}}" class="cb-tick">✓</text>
+      </view>
+      <text class="agreement-text">我已阅读并同意</text>
+      <text class="agreement-link" catchtap="showTermsDetail">《用户服务协议》和《隐私政策》</text>
+    </view>
+
+    <!-- 一键登录按钮 -->
+    <button
+      class="login-btn"
+      bindtap="handleLogin"
+      loading="{{loading}}"
+      disabled="{{loading || !agreed}}"
+    >
+      微信一键登录
+    </button>
+
+    <!-- 登录说明 -->
+    <view class="login-hint">
+      <text class="login-hint-text">登录后数据云同步，多端共享</text>
+    </view>
+  </view>
+
+  <!-- 条款弹窗 -->
+  <view wx:if="{{showTerms}}" class="modal-overlay" bindtap="hideTermsDetail">
+    <view class="terms-modal-content" catchtap="noop">
+      <text class="modal-title">用户协议与隐私政策</text>
+      <scroll-view class="terms-body" scroll-y>
+        <view class="terms-section">
+          <text class="terms-heading">一、用户服务协议</text>
+          <text class="terms-para">1. 欢迎使用"菜菜手帐"小程序。本小程序是一个家庭/伴侣间菜品管理与协作工具。</text>
+          <text class="terms-para">2. 用户通过微信一键登录后，可创建或加入空间，与空间成员共享菜品信息。</text>
+          <text class="terms-para">3. 用户应遵守法律法规，不得发布违规内容。本小程序仅用于菜品记录与分享。</text>
+          <text class="terms-para">4. 用户可以随时退出空间或删除账号相关数据。</text>
+        </view>
+        <view class="terms-section">
+          <text class="terms-heading">二、隐私政策</text>
+          <text class="terms-para">1. 我们仅收集您的微信OpenID和昵称，用于账号识别和空间协作功能。</text>
+          <text class="terms-para">2. 您的菜品数据存储在微信云开发数据库中，仅空间内成员可见。</text>
+          <text class="terms-para">3. 我们不会将您的数据分享给任何第三方，也不会用于商业用途。</text>
+          <text class="terms-para">4. 您可以通过删除空间或退出登录来清除数据。如有疑问，请联系开发者。</text>
+        </view>
+      </scroll-view>
+      <view class="form-buttons">
+        <button class="btn btn-primary form-confirm" bindtap="hideTermsDetail">我已了解</button>
+      </view>
+    </view>
+  </view>
+</view>

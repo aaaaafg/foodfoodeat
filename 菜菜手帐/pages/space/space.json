@@ -1,0 +1,7 @@
+{
+  "usingComponents": {},
+  "navigationBarTitleText": "菜单空间",
+  "enablePullDownRefresh": true,
+  "backgroundColorTop": "#f2f2f7",
+  "backgroundColorBottom": "#f2f2f7"
+}

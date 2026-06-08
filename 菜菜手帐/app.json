@@ -1,0 +1,30 @@
+{
+  "pages": [
+    "pages/space/space",
+    "pages/login/login",
+    "pages/history/history",
+    "pages/profile/profile"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTitleText": "菜菜手帐",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f5f5f7"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#8e8e93",
+    "selectedColor": "#007aff",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      { "pagePath": "pages/space/space", "text": "菜单空间" },
+      { "pagePath": "pages/history/history", "text": "历史记录" },
+      { "pagePath": "pages/profile/profile", "text": "用户中心" }
+    ]
+  },
+  "cloud": true,
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

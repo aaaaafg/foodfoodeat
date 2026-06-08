@@ -1,0 +1,182 @@
+/* 全局样式 - 苹果iOS极简风格 */
+page {
+  --bg: #f2f2f7;
+  --card-bg: #ffffff;
+  --primary: #007aff;
+  --danger: #ff3b30;
+  --danger-light: rgba(255, 59, 48, 0.08);
+  --text: #1c1c1e;
+  --text-secondary: #6d6d72;
+  --text-tertiary: #aeaeb2;
+  --separator: #e5e5ea;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 12px rgba(0, 0, 0, 0.06);
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 20px;
+
+  background-color: var(--bg);
+  font-family: -apple-system, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 16px;
+  color: var(--text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 大圆角卡片 */
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 18px 16px;
+  margin: 8px 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* 清除微信 button 默认样式 */
+button {
+  background: none;
+  border: none;
+  padding: 0;
+  line-height: inherit;
+  font-size: inherit;
+}
+
+button::after { border: none; }
+
+/* 圆角按钮 */
+.btn {
+  border-radius: 12px;
+  font-size: 16px;
+  padding: 13px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.btn:active {
+  transform: scale(0.96);
+  opacity: 0.85;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+}
+
+/* 胶囊按钮 */
+.btn-capsule {
+  border-radius: 24px;
+  padding: 14px 28px;
+  font-weight: 600;
+  font-size: 16px;
+  box-shadow: 0 4px 14px rgba(0, 122, 255, 0.25);
+}
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 40px 60px;
+}
+
+.empty-state-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.empty-state-text {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.empty-state-sub {
+  font-size: 14px;
+  color: var(--text-tertiary);
+  margin-top: 8px;
+}
+
+/* 弹窗蒙层 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-content {
+  width: 100%;
+  background: #ffffff;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: 28px 20px calc(90px + env(safe-area-inset-bottom));
+  animation: slideUp 0.28s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* 弹窗通用样式 */
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  display: block;
+  text-align: center;
+  margin-bottom: 24px;
+  color: var(--text);
+}
+
+.modal-desc {
+  font-size: 15px;
+  color: var(--text-secondary);
+  display: block;
+  text-align: center;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.form-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.form-cancel {
+  flex: 1;
+  font-size: 15px;
+  background: var(--bg);
+  border-radius: 12px;
+}
+
+.form-confirm {
+  flex: 1;
+  font-size: 15px;
+  border-radius: 12px;
+}

@@ -1,0 +1,94 @@
+<!-- 历史记录页面 -->
+<view class="container">
+
+  <!-- 有历史记录 -->
+  <scroll-view wx:if="{{history.length > 0}}" class="history-list" scroll-y enhanced show-scrollbar="{{false}}">
+    <!-- 空间标签 -->
+    <view class="history-space-label">
+      <text class="history-space-text">{{spaceName || '当前空间'}}</text>
+    </view>
+
+    <view
+      wx:for="{{history}}"
+      wx:key="date"
+      class="history-card card"
+    >
+      <!-- 日期头部可点击展开 -->
+      <view class="history-header" bindtap="toggleExpand" data-date="{{item.date}}">
+        <view class="history-header-left">
+          <text class="history-date">{{item.formatted}}</text>
+          <text wx:if="{{item.spaceName}}" class="history-card-space">{{item.spaceName}}</text>
+        </view>
+        <view class="history-header-right">
+          <text class="history-count">{{item.items.length}}道菜</text>
+          <text class="expand-arrow">{{item.expanded ? '▾' : '▸'}}</text>
+          <view class="delete-day-btn" catchtap="deleteDay" data-date="{{item.date}}">
+            <text class="delete-day-icon">✕</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 快速预览：菜品名连排 -->
+      <view wx:if="{{!item.expanded}}" class="history-preview">
+        <text wx:for="{{item.items}}" wx:key="id" wx:for-item="dish" class="preview-chip">{{dish.name}}</text>
+      </view>
+
+      <!-- 展开的菜品列表 -->
+      <view wx:if="{{item.expanded}}" class="history-dishes">
+        <view
+          wx:for="{{item.items}}"
+          wx:key="id"
+          wx:for-item="dish"
+          class="history-dish-item"
+        >
+          <view class="history-dish-dot"></view>
+          <view class="history-dish-content">
+            <text class="history-dish-name">{{dish.name}}</text>
+            <text wx:if="{{dish.addedBy}}" class="history-dish-author">{{dish.addedBy}} 添加</text>
+            <text wx:if="{{dish.note}}" class="history-dish-note">{{dish.note}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 加载更多（仅云端分页时显示） -->
+    <view wx:if="{{hasMore}}" class="load-more-bar">
+      <button class="btn btn-ghost load-more-btn" bindtap="loadMoreHistory">
+        {{loading ? '加载中...' : '加载更多'}}
+      </button>
+    </view>
+    <view wx:if="{{loading && history.length > 0}}" class="loading-inline">
+      <text>加载中...</text>
+    </view>
+
+    <!-- 清空所有按钮 -->
+    <view class="clear-all-bar">
+      <button class="btn btn-ghost" bindtap="clearAll">清空所有历史记录</button>
+    </view>
+  </scroll-view>
+
+  <!-- 空状态 -->
+  <view wx:elif="{{!loading}}" class="empty-state">
+    <text class="empty-state-icon">📋</text>
+    <text class="empty-state-text">还没有历史记录</text>
+    <text class="empty-state-sub">开始记录每天的菜单吧</text>
+  </view>
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading && history.length === 0}}" class="loading-state">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 清空确认弹窗 -->
+  <view wx:if="{{showClearConfirm}}" class="modal-overlay" bindtap="hideClearConfirm">
+    <view class="modal-content" catchtap="noop">
+      <text class="modal-title">{{clearTarget === 'all' ? '确认清空全部' : '确认删除'}}</text>
+      <text class="modal-desc">{{clearTarget === 'all' ? '确定要清空所有历史记录吗？此操作无法撤销。' : '确定要删除这一天的记录吗？'}}</text>
+      <view class="form-buttons">
+        <button class="btn btn-ghost form-cancel" bindtap="hideClearConfirm">取消</button>
+        <button class="btn btn-danger form-confirm" bindtap="confirmClear">确认</button>
+      </view>
+    </view>
+  </view>
+</view>

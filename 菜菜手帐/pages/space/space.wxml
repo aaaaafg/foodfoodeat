@@ -1,0 +1,219 @@
+<view class="container">
+  <!-- 游客模式提示条 - 点击引导至个人主页登录 -->
+  <view class="guest-banner" wx:if="{{isGuest}}" bindtap="goToProfile">
+    <view class="guest-banner-inner">
+      <text class="guest-banner-icon">👤</text>
+      <text class="guest-banner-text">登录后可解锁完整功能</text>
+    </view>
+    <text class="guest-banner-arrow">›</text>
+  </view>
+
+  <!-- 日期头部 -->
+  <view class="date-header">
+    <view class="date-info">
+      <text class="date-text">{{todayDate}}</text>
+      <text class="date-weekday">{{todayWeekday}}</text>
+    </view>
+    <button class="share-btn" open-type="share">
+      <text class="share-icon">↗</text>
+    </button>
+  </view>
+
+  <!-- 当前空间卡片入口 -->
+  <view class="space-entry" bindtap="toggleSpaceManager">
+    <view class="space-entry-left">
+      <text class="space-entry-icon">🏠</text>
+      <view class="space-entry-info">
+        <text class="space-entry-label">当前空间</text>
+        <text class="space-entry-name">{{spaceName || '点击创建或加入空间'}}</text>
+      </view>
+    </view>
+    <text class="space-entry-arrow">›</text>
+  </view>
+
+  <!-- 菜品列表 -->
+  <scroll-view wx:if="{{menu.items.length > 0}}" class="menu-list" scroll-y enhanced show-scrollbar="{{false}}">
+    <view wx:for="{{menu.items}}" wx:key="id" class="dish-card card" data-id="{{item.id}}">
+      <view class="dish-main">
+        <view class="dish-info" bindtap="toggleNote" data-id="{{item.id}}">
+          <text class="dish-name">{{item.name}}</text>
+          <text wx:if="{{item.addedBy}}" class="dish-added-by">{{item.addedBy}} 添加</text>
+          <text wx:if="{{item.note}}" class="dish-note-label">{{item.expanded ? '收起备注' : '查看备注'}}</text>
+        </view>
+        <view class="dish-delete" bindtap="deleteDish" data-id="{{item.id}}">
+          <text class="delete-icon">✕</text>
+        </view>
+      </view>
+      <view wx:if="{{item.note && item.expanded}}" class="dish-note-content card-note">
+        <text class="note-text">{{item.note}}</text>
+      </view>
+    </view>
+
+    <view class="action-bar">
+      <button class="btn btn-primary btn-capsule add-btn" bindtap="showAddModal">
+        <text class="add-icon">+</text><text>添加菜品</text>
+      </button>
+      <view class="action-bar-bottom">
+        <button class="btn btn-ghost clear-btn" bindtap="clearAll">清空今日菜单</button>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 空状态 -->
+  <view wx:else class="empty-state">
+    <text class="empty-state-icon">🍽️</text>
+    <text class="empty-state-text">今天还没点菜</text>
+    <text wx:if="{{!spaceName}}" class="empty-state-sub">创建或加入一个空间开始记录吧</text>
+    <button wx:if="{{spaceName}}" class="btn btn-primary btn-capsule add-btn-empty" bindtap="showAddModal">
+      <text class="add-icon">+</text><text>开始添加菜品</text>
+    </button>
+  </view>
+
+  <!-- ========== 弹窗区域 ========== -->
+
+  <!-- 空间管理面板 -->
+  <view wx:if="{{showSpaceManager}}" class="modal-overlay" bindtap="hideSpaceManager">
+    <view class="modal-content" catchtap="noop">
+      <text class="modal-title">菜单空间</text>
+
+      <view wx:if="{{spaceList.length > 0}}" class="space-list">
+        <view wx:for="{{spaceList}}" wx:key="_id"
+          class="space-card {{item._id === activeSpaceId ? 'space-active' : ''}}"
+        >
+          <view class="space-main" bindtap="switchSpace" data-id="{{item._id}}">
+            <text class="space-icon">{{item.type === 'couple' ? '💑' : item.type === 'family' ? '👨‍👩‍👧‍👦' : item.type === 'friends' ? '🍚' : '✨'}}</text>
+            <view class="space-info">
+              <text class="space-name">{{item.name}}</text>
+              <text class="space-meta">{{item.memberCount || 0}}人 · {{item.role === 'owner' ? '管理员' : '成员'}}</text>
+            </view>
+            <view wx:if="{{item._id === activeSpaceId}}" class="space-badge"><text>当前</text></view>
+          </view>
+          <view class="space-actions-row">
+            <text class="space-action-link" bindtap="showSpaceDetail" data-id="{{item._id}}">成员</text>
+            <text class="space-action-link" bindtap="showInvite" data-id="{{item._id}}">邀请</text>
+            <text class="space-action-link danger" bindtap="showLeave" data-id="{{item._id}}">退出</text>
+          </view>
+        </view>
+      </view>
+
+      <view wx:else class="space-empty-hint">
+        <text>还没有任何空间</text>
+      </view>
+
+      <view class="form-buttons">
+        <button class="btn btn-primary form-confirm" bindtap="startCreate">+ 创建</button>
+        <button class="btn btn-ghost form-confirm" bindtap="startJoin">🔗 加入</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 添加菜品弹窗 -->
+  <view wx:if="{{showModal}}" class="modal-overlay" bindtap="hideAddModal">
+    <view class="modal-content" catchtap="noop">
+      <text class="modal-title">添加菜品</text>
+      <view class="form-group">
+        <text class="form-label">菜品名称</text>
+        <input class="form-input" placeholder="例如：红烧排骨" value="{{newDishName}}" bindinput="onNameInput" maxlength="30" focus="{{showModal}}"/>
+      </view>
+      <view class="form-group">
+        <text class="form-label">备注（选填）</text>
+        <textarea class="form-textarea" placeholder="多放辣椒，少盐" value="{{newDishNote}}" bindinput="onNoteInput" maxlength="200" auto-height/>
+      </view>
+      <view class="form-buttons">
+        <button class="btn btn-ghost form-cancel" bindtap="hideAddModal">取消</button>
+        <button class="btn btn-primary form-confirm" bindtap="addDish">确认添加</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 清空确认弹窗 -->
+  <view wx:if="{{showClearConfirm}}" class="modal-overlay" bindtap="hideClearConfirm">
+    <view class="modal-content" catchtap="noop">
+      <text class="modal-title">确认清空</text>
+      <text class="modal-desc">确定要清空今天的所有菜品吗？此操作无法撤销。</text>
+      <view class="form-buttons">
+        <button class="btn btn-ghost form-cancel" bindtap="hideClearConfirm">取消</button>
+        <button class="btn btn-danger form-confirm" bindtap="confirmClear">确认清空</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 创建空间 -->
+  <view wx:if="{{showCreate}}" class="modal-overlay" bindtap="cancelCreate">
+    <view class="modal-content" catchtap="noop">
+      <text class="modal-title">创建空间</text>
+      <view class="type-grid">
+        <view wx:for="{{spaceTypes}}" wx:key="key"
+          class="type-item {{spaceType === item.key ? 'type-active' : ''}}"
+          data-type="{{item.key}}" bindtap="selectType">
+          <text class="type-icon">{{item.icon}}</text>
+          <text class="type-label">{{item.label}}</text>
+        </view>
+      </view>
+      <view class="form-group">
+        <input class="form-input" placeholder="空间名称" value="{{newSpaceName}}" bindinput="onSpaceNameInput" maxlength="20"/>
+      </view>
+      <view class="form-buttons">
+        <button class="btn btn-ghost form-cancel" bindtap="cancelCreate">取消</button>
+        <button class="btn btn-primary form-confirm" bindtap="confirmCreate">创建</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加入空间 -->
+  <view wx:if="{{showJoin}}" class="modal-overlay" bindtap="cancelJoin">
+    <view class="modal-content" catchtap="noop">
+      <text class="modal-title">加入空间</text>
+      <text class="modal-desc">输入邀请码加入已有空间</text>
+      <view class="form-group">
+        <input class="form-input invite-code-input" placeholder="6位邀请码" value="{{joinCode}}" bindinput="onJoinCodeInput" maxlength="6" focus="{{showJoin}}"/>
+      </view>
+      <view class="form-buttons">
+        <button class="btn btn-ghost form-cancel" bindtap="cancelJoin">取消</button>
+        <button class="btn btn-primary form-confirm" bindtap="confirmJoin">加入</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 邀请码 -->
+  <view wx:if="{{showInvite}}" class="modal-overlay" bindtap="hideInviteModal">
+    <view class="modal-content" catchtap="noop">
+      <text class="modal-title">邀请成员</text>
+      <text class="modal-desc">将邀请码分享给TA</text>
+      <view class="invite-code-display" bindtap="copyInviteCode">
+        <text class="invite-code-text">{{selectedSpace.inviteCode}}</text>
+        <text class="invite-code-tip">点击复制</text>
+      </view>
+      <view class="form-buttons">
+        <button class="btn btn-primary form-confirm" bindtap="hideInviteModal">完成</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 成员列表 -->
+  <view wx:if="{{showMembers}}" class="modal-overlay" bindtap="hideMembers">
+    <view class="modal-content" catchtap="noop">
+      <text class="modal-title">{{selectedSpace.name}} · 成员</text>
+      <view wx:for="{{members}}" wx:key="_id" class="member-item">
+        <view class="member-avatar"><text>{{item.nickName ? item.nickName.charAt(0) : '👤'}}</text></view>
+        <text class="member-name">{{item.nickName}}</text>
+        <text wx:if="{{item.role === 'owner'}}" class="member-tag">创建者</text>
+      </view>
+      <view class="form-buttons">
+        <button class="btn btn-primary form-confirm" bindtap="hideMembers">关闭</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 退出确认 -->
+  <view wx:if="{{showLeaveConfirm}}" class="modal-overlay" bindtap="hideLeaveConfirm">
+    <view class="modal-content" catchtap="noop">
+      <text class="modal-title">退出空间</text>
+      <text class="modal-desc">确定退出「{{selectedSpace.name}}」？</text>
+      <view class="form-buttons">
+        <button class="btn btn-ghost form-cancel" bindtap="hideLeaveConfirm">取消</button>
+        <button class="btn btn-danger form-confirm" bindtap="confirmLeave">确认退出</button>
+      </view>
+    </view>
+  </view>
+</view>

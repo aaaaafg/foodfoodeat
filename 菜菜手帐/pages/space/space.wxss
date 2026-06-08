@@ -1,0 +1,267 @@
+.container { min-height: 100vh; padding-bottom: 40px; }
+
+/* 游客模式提示条 - 可点击引导卡片 */
+.guest-banner {
+  margin: 8px 16px 0;
+  padding: 10px 14px;
+  background: #ffffff;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-sm);
+}
+
+.guest-banner:active {
+  transform: scale(0.985);
+  background: #f9f9fb;
+}
+
+.guest-banner-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guest-banner-icon {
+  font-size: 18px;
+}
+
+.guest-banner-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.guest-banner-arrow {
+  font-size: 22px;
+  color: var(--text-tertiary);
+  font-weight: 300;
+}
+
+/* 日期头部 */
+.date-header {
+  padding: 24px 16px 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.date-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.date-text {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.15;
+  letter-spacing: -0.5px;
+  white-space: nowrap;
+}
+
+.date-weekday {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  font-weight: 400;
+  margin-top: 2px;
+}
+
+/* 转发按钮 - 右上角图标 */
+.share-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+  margin-right: -6px;
+}
+
+.share-btn:active { transform: scale(0.92); background: #e8e8ed; }
+.share-icon { font-size: 18px; color: var(--primary); font-weight: 600; }
+
+/* 当前空间卡片入口 */
+.space-entry {
+  margin: 16px 16px 8px;
+  padding: 14px 18px;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-sm);
+}
+
+.space-entry:active { transform: scale(0.985); background: #f9f9fb; }
+
+.space-entry-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.space-entry-icon {
+  font-size: 28px;
+}
+
+.space-entry-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.space-entry-label {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.space-entry-name {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.space-entry-arrow {
+  font-size: 24px;
+  color: var(--text-tertiary);
+  font-weight: 300;
+}
+
+/* 菜品列表 */
+.menu-list {
+  height: calc(100vh - 240px);
+  padding-bottom: 12px;
+}
+
+.dish-card {
+  transition: transform 0.15s ease;
+}
+
+.dish-card:active { transform: scale(0.985); }
+
+.dish-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dish-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dish-name {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dish-added-by {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.dish-note-label {
+  font-size: 13px;
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.dish-delete {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  margin-left: 10px;
+}
+
+.dish-delete:active { background: var(--danger-light); }
+
+.delete-icon {
+  font-size: 15px;
+  color: var(--text-tertiary);
+  font-weight: 300;
+}
+
+/* 备注 */
+.card-note {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--separator);
+}
+
+.note-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* 操作栏 */
+.action-bar { padding: 4px 4px 0; }
+.add-btn { width: 100%; font-size: 17px; }
+.add-icon { font-size: 20px; margin-right: 6px; font-weight: 400; }
+.add-btn-empty { margin-top: 20px; padding: 14px 36px; }
+.action-bar-bottom { display: flex; justify-content: center; margin-top: 14px; }
+.clear-btn { padding: 12px 28px; font-size: 14px; color: var(--text-tertiary); }
+
+/* 空间面板内列表 */
+.space-list { padding: 0 4px; max-height: 40vh; overflow-y: auto; }
+.space-card { margin-bottom: 4px; background: #f9f9fb; border-radius: var(--radius-sm); padding: 14px; }
+.space-active { border: 1.5px solid var(--primary); background: rgba(0,122,255,0.03); }
+
+.space-main { display: flex; align-items: center; gap: 12px; }
+.space-main:active { opacity: 0.7; }
+.space-icon { font-size: 32px; }
+.space-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.space-name { font-size: 16px; font-weight: 600; color: var(--text); }
+.space-meta { font-size: 12px; color: var(--text-secondary); }
+.space-badge { background: var(--primary); border-radius: 10px; padding: 2px 10px; }
+.space-badge text { font-size: 11px; color: #fff; font-weight: 600; }
+
+.space-actions-row { display: flex; gap: 18px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--separator); }
+.space-action-link { font-size: 13px; color: var(--primary); }
+.space-action-link:active { opacity: 0.6; }
+.space-action-link.danger { color: var(--danger); }
+
+.space-empty-hint { text-align: center; padding: 24px 0; }
+.space-empty-hint text { font-size: 15px; color: var(--text-tertiary); }
+
+/* 类型网格 */
+.type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.type-item { display: flex; flex-direction: column; align-items: center; padding: 16px 8px; border-radius: var(--radius); background: var(--bg); border: 2px solid transparent; transition: all 0.15s ease; }
+.type-item:active { transform: scale(0.95); }
+.type-active { border-color: var(--primary); background: rgba(0,122,255,0.05); }
+.type-icon { font-size: 28px; margin-bottom: 4px; }
+.type-label { font-size: 13px; color: var(--text); font-weight: 500; }
+
+/* 邀请码 */
+.invite-code-display { background: var(--bg); border-radius: var(--radius); padding: 28px; display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
+.invite-code-display:active { background: #e8e8ed; }
+.invite-code-text { font-size: 36px; font-weight: 800; color: var(--primary); letter-spacing: 8px; margin-bottom: 8px; }
+.invite-code-tip { font-size: 13px; color: var(--text-tertiary); }
+.invite-code-input { text-align: center; font-size: 22px; letter-spacing: 6px; text-transform: uppercase; }
+
+/* 成员 */
+.member-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+.member-avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.member-name { font-size: 16px; color: var(--text); flex: 1; font-weight: 500; }
+.member-tag { font-size: 12px; color: var(--primary); background: rgba(0,122,255,0.08); padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+
+/* 弹窗表单 */
+.form-group { margin-bottom: 20px; }
+.form-label { font-size: 14px; color: var(--text-secondary); display: block; margin-bottom: 8px; font-weight: 500; }
+.form-input { width: 100%; height: 48px; background: var(--bg); border-radius: var(--radius-sm); padding: 0 16px; font-size: 16px; box-sizing: border-box; }
+.form-textarea { width: 100%; min-height: 80px; background: var(--bg); border-radius: var(--radius-sm); padding: 12px 16px; font-size: 16px; box-sizing: border-box; }

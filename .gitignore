@@ -1,0 +1,21 @@
+# 微信小程序私有配置（含个人设置，不应提交）
+project.private.config.json
+
+# 需求文档和临时文件
+今日吃什么小程序具体要求
+具体问题
+最新界面要求
+最新要求2.0
+
+# 依赖
+node_modules/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.idea/
+.vscode/

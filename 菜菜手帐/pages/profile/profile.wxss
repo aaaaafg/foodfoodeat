@@ -1,0 +1,272 @@
+.container { min-height: 100vh; padding-top: 32px; }
+
+/* 用户信息卡片 */
+.profile-card {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  margin: 0 16px;
+  padding: 40px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: var(--shadow-md);
+}
+
+/* 头像 - 居中，点击更换 */
+.avatar-btn {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  padding: 0;
+  margin: 0 0 20px 0;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.avatar-btn::after { display: none; }
+
+.avatar-img {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+}
+
+.avatar-placeholder {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #007aff, #5856d6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-char {
+  font-size: 38px;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* 游客模式标识 */
+.guest-badge {
+  background: rgba(0, 122, 255, 0.08);
+  border: 1px solid rgba(0, 122, 255, 0.2);
+  border-radius: 12px;
+  padding: 6px 16px;
+  margin-bottom: 20px;
+  align-self: center;
+}
+
+.guest-badge text {
+  font-size: 12px;
+  color: #007aff;
+  font-weight: 600;
+}
+
+/* 修改限制提示 */
+.field-lock-hint {
+  font-size: 12px;
+  color: #ff9500;
+  font-weight: 500;
+  margin-top: -6px;
+  margin-bottom: 20px;
+  text-align: center;
+  display: block;
+}
+
+/* 昵称显示 - 大点击区域 */
+.nickname-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 32px;
+  margin-bottom: 20px;
+  min-height: 52px;
+  border-radius: var(--radius-sm);
+}
+
+.nickname-row:active { background: var(--bg); }
+
+.nickname-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+}
+
+.nickname-edit-hint {
+  font-size: 13px;
+  color: var(--primary);
+  font-weight: 500;
+}
+
+/* 昵称编辑 */
+.nickname-edit-row {
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 0 8px;
+  box-sizing: border-box;
+}
+
+.nickname-edit-input {
+  width: 100%;
+  height: 48px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 0 16px;
+  font-size: 17px;
+  text-align: center;
+  font-weight: 600;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+}
+
+.nickname-edit-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.nickname-cancel-btn {
+  flex: 1;
+  height: 44px;
+  background: var(--bg);
+  border-radius: 12px;
+  font-size: 15px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 44px;
+}
+
+.nickname-save-btn {
+  flex: 1;
+  height: 44px;
+  background: var(--primary);
+  border-radius: 12px;
+  font-size: 15px;
+  color: #fff;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 44px;
+}
+
+/* 统计 */
+.profile-stats {
+  display: flex;
+  gap: 48px;
+  justify-content: center;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.stat-num {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+/* 操作列表 */
+.action-list {
+  margin: 20px 16px;
+  background: #fff;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  padding: 18px 20px;
+}
+
+.action-item:active { background: #f5f5f7; }
+
+.action-icon {
+  font-size: 24px;
+  margin-right: 14px;
+}
+
+.action-text {
+  font-size: 17px;
+  color: var(--text);
+  flex: 1;
+  font-weight: 500;
+}
+
+.action-arrow {
+  font-size: 24px;
+  color: var(--text-tertiary);
+  font-weight: 300;
+}
+
+/* 通知设置 */
+.action-text-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.action-sub {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.notify-status-on {
+  font-size: 13px;
+  color: #34c759;
+  font-weight: 500;
+  margin-right: 8px;
+}
+
+.notify-status-off {
+  font-size: 13px;
+  color: var(--primary);
+  font-weight: 500;
+  margin-right: 8px;
+}
+
+/* 退出登录 */
+.logout-section {
+  display: flex;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.logout-link {
+  font-size: 16px;
+  color: #ff6b6b;
+  font-weight: 500;
+  padding: 10px 24px;
+}
+
+.logout-link:active { opacity: 0.6; }
+
+/* 版本 */
+.version-row {
+  text-align: center;
+  padding-bottom: 40px;
+}
+
+.version-row text {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
