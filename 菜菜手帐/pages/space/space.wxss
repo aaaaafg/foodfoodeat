@@ -1,4 +1,4 @@
-.container { min-height: 100vh; padding-bottom: 40px; }
+.container { min-height: 100vh; padding-bottom: 110px; }
 
 /* 日期头部 */
 .date-header {
@@ -116,8 +116,9 @@
 
 /* 菜品列表 */
 .menu-list {
-  height: calc(100vh - 260px);
-  padding-bottom: 12px;
+  height: calc(100vh - 275px);
+  padding-bottom: 16px;
+  box-sizing: border-box;
 }
 
 .dish-card { transition: transform 0.15s ease; }
@@ -226,7 +227,6 @@
   background: #f9f9fb;
   border-radius: var(--radius-sm);
   padding: 14px;
-  position: relative;
 }
 
 .space-active {
@@ -250,15 +250,28 @@
 
 .space-badge text { font-size: 11px; color: #ffffff; font-weight: 600; }
 
-.space-delete {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  padding: 4px 10px;
+.space-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--separator);
 }
 
-.space-delete:active { opacity: 0.6; }
-.space-delete-text { font-size: 12px; color: var(--danger); }
+.space-action-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.space-delete-text {
+  font-size: 13px;
+  color: var(--danger);
+  font-weight: 500;
+  padding: 6px 10px;
+}
+
+.space-delete-text:active { opacity: 0.6; }
 
 .space-empty-hint { text-align: center; padding: 24px 0; }
 .space-empty-hint text { font-size: 15px; color: var(--text-tertiary); }
@@ -301,14 +314,19 @@
 .icon-option-emoji { font-size: 26px; }
 .icon-option-label { font-size: 11px; color: var(--text-secondary); }
 
-/* 分享卡片预览 */
+/* 分享卡片预览：垂直居中（区别于底部弹层） */
+.preview-overlay {
+  align-items: center;
+}
+
 .share-preview-wrap {
-  width: 100%;
+  width: 88%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 24px 20px 40px;
+  padding: 20px 0;
   box-sizing: border-box;
+  max-height: 92vh;
 }
 
 .share-preview-card {
@@ -355,6 +373,8 @@
 
 .guide-card {
   width: 84%;
+  max-height: 86vh;
+  overflow-y: auto;
   background: #ffffff;
   border-radius: var(--radius-lg);
   padding: 28px 22px 24px;

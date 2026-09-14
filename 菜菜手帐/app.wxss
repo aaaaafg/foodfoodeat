@@ -129,7 +129,7 @@ button::after { border: none; }
   width: 100%;
   background: #ffffff;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  padding: 28px 20px calc(90px + env(safe-area-inset-bottom));
+  padding: 28px 20px calc(60px + env(safe-area-inset-bottom));
   animation: slideUp 0.28s ease;
 }
 

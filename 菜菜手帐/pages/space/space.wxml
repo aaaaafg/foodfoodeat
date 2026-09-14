@@ -84,12 +84,13 @@
             <text class="space-icon">{{item.icon}}</text>
             <view class="space-info">
               <text class="space-name">{{item.name}}</text>
-              <text class="space-meta">互不干扰的独立菜单</text>
+              <text class="space-meta">独立菜单 · 互不干扰</text>
             </view>
             <view wx:if="{{item.id === activeSpaceId}}" class="space-badge"><text>当前</text></view>
           </view>
-          <view class="space-delete" catchtap="deleteSpace" data-id="{{item.id}}">
-            <text class="space-delete-text">删除</text>
+          <view class="space-actions-row">
+            <text class="space-action-hint">点击卡片切换分组</text>
+            <text class="space-delete-text" catchtap="deleteSpace" data-id="{{item.id}}">删除分组</text>
           </view>
         </view>
       </view>
@@ -158,7 +159,7 @@
   </view>
 
   <!-- 分享卡片预览 -->
-  <view wx:if="{{showSharePreview}}" class="modal-overlay" bindtap="hideSharePreview">
+  <view wx:if="{{showSharePreview}}" class="modal-overlay preview-overlay" bindtap="hideSharePreview">
     <view class="share-preview-wrap" catchtap="noop">
       <view class="share-preview-card">
         <image class="share-preview-img" src="{{shareCardPath}}" mode="widthFix" show-menu-by-longpress="{{true}}"/>

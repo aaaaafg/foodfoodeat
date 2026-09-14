@@ -1,4 +1,4 @@
-.container { min-height: 100vh; }
+.container { min-height: 100vh; padding-bottom: 110px; }
 
 .history-space-label {
   padding: 12px 20px 4px;
@@ -11,7 +11,7 @@
 }
 
 .history-list {
-  height: calc(100vh - 100px);
+  height: calc(100vh - 130px);
   padding: 4px 0 20px;
   box-sizing: border-box;
 }

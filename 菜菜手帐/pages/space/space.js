@@ -79,8 +79,10 @@ Page({
     const [y, m, d] = dateKey.split('-')
     const weekDays = ['日', '一', '二', '三', '四', '五', '六']
     const date = new Date(+y, +m - 1, +d)
+    const mm = ('0' + m).slice(-2)
+    const dd = ('0' + d).slice(-2)
     this.setData({
-      todayDate: `${y}年${+m}月${+d}日`,
+      todayDate: `${y}年${mm}月${dd}日`,
       todayWeekday: `星期${weekDays[date.getDay()]}`
     })
   },
@@ -137,6 +139,8 @@ Page({
     if (!spaceId) return
     const space = storage.getSpaces().find(s => s.id === spaceId)
     storage.saveMenu(spaceId, space ? space.name : '', items)
+    // 菜单变了，之前生成的卡片作废，下次分享时重新生成
+    this.setData({ shareCardPath: '' })
   },
 
   toggleSpaceManager() {
@@ -388,9 +392,12 @@ Page({
     })
   },
 
-  // 右上角分享：带上生成的卡片图（返回 Promise，微信会显示“正在准备”）
+  // 右上角分享：优先复用已生成的卡片，否则现场生成（返回 Promise，微信会显示“正在准备”）
   onShareAppMessage() {
     const title = this.shareTitle()
+    if (this.data.shareCardPath) {
+      return { title, path: '/pages/space/space', imageUrl: this.data.shareCardPath }
+    }
     return shareCard.buildShareCard(this, this.cardData())
       .then(path => ({
         title,

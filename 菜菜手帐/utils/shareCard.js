@@ -26,6 +26,15 @@ function roundRect(ctx, x, y, w, h, r) {
 function drawAvatar(canvasNode, ctx, data, x, y, r) {
   return new Promise((resolve) => {
     const char = (data.nickName || '我').charAt(0) || '👤'
+    const finish = () => {
+      // 白色描边，苹果风头像环
+      ctx.beginPath()
+      ctx.arc(x, y, r + 1.5, 0, Math.PI * 2)
+      ctx.strokeStyle = '#ffffff'
+      ctx.lineWidth = 3
+      ctx.stroke()
+      resolve()
+    }
     const fallback = () => {
       ctx.save()
       ctx.beginPath()
@@ -33,12 +42,12 @@ function drawAvatar(canvasNode, ctx, data, x, y, r) {
       ctx.fillStyle = '#007aff'
       ctx.fill()
       ctx.fillStyle = '#ffffff'
-      ctx.font = '600 ' + Math.round(r) + 'px sans-serif'
+      ctx.font = 'bold ' + Math.round(r) + 'px sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(char, x, y + 1)
       ctx.restore()
-      resolve()
+      finish()
     }
     if (!data.avatarUrl) {
       fallback()
@@ -57,7 +66,7 @@ function drawAvatar(canvasNode, ctx, data, x, y, r) {
         return
       }
       ctx.restore()
-      resolve()
+      finish()
     }
     img.onerror = fallback
     img.src = data.avatarUrl
@@ -78,7 +87,7 @@ function drawBase(ctx, data) {
 function drawHeader(ctx, data) {
   // 昵称
   ctx.fillStyle = '#1c1c1e'
-  ctx.font = '600 20px sans-serif'
+  ctx.font = 'bold 20px sans-serif'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'alphabetic'
   ctx.fillText(truncate(data.nickName || '我', 8) + ' 的今日菜单', 118, 72)
@@ -87,7 +96,7 @@ function drawHeader(ctx, data) {
   ctx.fillStyle = '#8e8e93'
   ctx.font = '12px sans-serif'
   const sub = `${data.spaceIcon || '🏠'} ${truncate(data.spaceName || '我的菜单', 10)} · ${data.dateText || ''} ${data.weekdayText || ''}`
-  ctx.fillText(truncate(sub, 40), 118, 94)
+  ctx.fillText(truncate(sub, 42), 118, 94)
 
   // 分割线
   ctx.strokeStyle = '#e5e5ea'
@@ -102,30 +111,30 @@ function drawDishes(ctx, data) {
   const items = data.items || []
   if (items.length === 0) {
     ctx.fillStyle = '#1c1c1e'
-    ctx.font = '600 17px sans-serif'
+    ctx.font = 'bold 17px sans-serif'
     ctx.textAlign = 'center'
-    ctx.fillText('🍽️ 今天还没点菜', CARD_W / 2, 210)
+    ctx.fillText('🍽️ 今天还没点菜', CARD_W / 2, 202)
     ctx.fillStyle = '#aeaeb2'
     ctx.font = '13px sans-serif'
-    ctx.fillText('点「添加菜品」开始记录吧', CARD_W / 2, 238)
+    ctx.fillText('点「添加菜品」开始记录吧', CARD_W / 2, 232)
     return
   }
 
   const MAX_SHOW = 5
   const LINE_H = 40
-  const startY = 148
+  const startY = 140
   const shown = items.slice(0, MAX_SHOW)
 
   shown.forEach((it, idx) => {
     const y = startY + idx * LINE_H
     // 序号
     ctx.fillStyle = '#007aff'
-    ctx.font = '600 12px sans-serif'
+    ctx.font = 'bold 12px sans-serif'
     ctx.textAlign = 'center'
     ctx.fillText(String(idx + 1), 66, y + 2)
     // 菜名
     ctx.fillStyle = '#1c1c1e'
-    ctx.font = '600 17px sans-serif'
+    ctx.font = 'bold 17px sans-serif'
     ctx.textAlign = 'left'
     ctx.fillText(truncate(it.name || '', 10), 88, y + 2)
     // 备注
@@ -141,7 +150,7 @@ function drawDishes(ctx, data) {
     ctx.fillStyle = '#aeaeb2'
     ctx.font = '13px sans-serif'
     ctx.textAlign = 'left'
-    ctx.fillText(`还有 ${items.length - MAX_SHOW} 道菜…`, 88, startY + MAX_SHOW * LINE_H + 12)
+    ctx.fillText(`还有 ${items.length - MAX_SHOW} 道菜…`, 88, startY + MAX_SHOW * LINE_H + 10)
   }
 }
 
@@ -149,7 +158,7 @@ function drawFooter(ctx) {
   ctx.fillStyle = '#aeaeb2'
   ctx.font = '12px sans-serif'
   ctx.textAlign = 'center'
-  ctx.fillText('菜菜手帐 · 好好吃饭，好好生活 ❤️', CARD_W / 2, CARD_H - 34)
+  ctx.fillText('菜菜手帐 · 好好吃饭，好好生活 ❤️', CARD_W / 2, 368)
 }
 
 function buildShareCard(page, data) {

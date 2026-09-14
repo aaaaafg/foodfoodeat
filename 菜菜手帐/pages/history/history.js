@@ -42,7 +42,9 @@ Page({
     const weekDays = ['日', '一', '二', '三', '四', '五', '六']
     const date = new Date(+y, +m - 1, +d)
     const weekDay = weekDays[date.getDay()]
-    return `${y}年${m}月${d}日 星期${weekDay}`
+    const mm = ('0' + m).slice(-2)
+    const dd = ('0' + d).slice(-2)
+    return `${y}年${mm}月${dd}日 星期${weekDay}`
   },
 
   toggleExpand(e) {
