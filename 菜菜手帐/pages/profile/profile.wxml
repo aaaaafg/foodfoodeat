@@ -9,47 +9,35 @@
       </view>
     </button>
 
-    <!-- 游客模式标识 -->
-    <view wx:if="{{isGuest}}" class="guest-badge">
-      <text>游客体验模式</text>
-    </view>
-
     <!-- 昵称 - 大点击区域 -->
     <view wx:if="{{!editingNickname}}" class="nickname-row" bindtap="startEditNickname">
       <text class="nickname-value">{{nickName}}</text>
       <text class="nickname-edit-hint">编辑</text>
     </view>
     <view wx:if="{{editingNickname}}" class="nickname-edit-row">
-      <input class="nickname-edit-input" type="text" value="{{editNickValue}}" bindinput="onNicknameInput" maxlength="20" focus="{{true}}" placeholder="输入昵称" />
+      <input class="nickname-edit-input" type="text" value="{{editNickValue}}" bindinput="onNicknameInput" maxlength="12" focus="{{true}}" placeholder="输入昵称" />
       <view class="nickname-edit-buttons">
         <button class="nickname-cancel-btn" bindtap="cancelEditNickname">取消</button>
         <button class="nickname-save-btn" bindtap="confirmEditNickname">保存</button>
       </view>
     </view>
 
+    <text class="profile-tip">头像和昵称会显示在你分享的菜单卡片上</text>
+
     <!-- 统计 -->
     <view class="profile-stats">
       <view class="stat-item">
         <text class="stat-num">{{spaceCount}}</text>
-        <text class="stat-label">个空间</text>
+        <text class="stat-label">个分组</text>
       </view>
     </view>
   </view>
 
   <!-- 操作列表 -->
   <view class="action-list">
-    <!-- 游客：登录入口 -->
-    <view wx:if="{{isGuest}}" class="action-item" bindtap="goToLogin">
-      <text class="action-icon">🔐</text>
-      <view class="action-text-group">
-        <text class="action-text">登录账号</text>
-        <text class="action-sub">{{cloudBroken ? '云服务暂不可用' : '登录后数据云同步，多端共享'}}</text>
-      </view>
-      <text class="action-arrow">›</text>
-    </view>
     <view class="action-item" bindtap="goToSpace">
       <text class="action-icon">🏠</text>
-      <text class="action-text">管理空间</text>
+      <text class="action-text">管理分组</text>
       <text class="action-arrow">›</text>
     </view>
     <view class="action-item" bindtap="showGuide">
@@ -59,39 +47,8 @@
     </view>
   </view>
 
-  <!-- 通知设置 -->
-  <view wx:if="{{!isGuest}}" class="action-list">
-    <view class="action-item" bindtap="requestNotification">
-      <text class="action-icon">🔔</text>
-      <view class="action-text-group">
-        <text class="action-text">菜单更新通知</text>
-        <text class="action-sub">有新菜品时通知你</text>
-      </view>
-      <text wx:if="{{enableNotify}}" class="notify-status-on">已订阅</text>
-      <text wx:else class="notify-status-off">订阅</text>
-      <text class="action-arrow">›</text>
-    </view>
-  </view>
-
-  <!-- 退出登录（仅登录用户可见） -->
-  <view wx:if="{{!isGuest}}" class="logout-section">
-    <text class="logout-link" bindtap="showLogout">退出登录</text>
-  </view>
-
   <!-- 版本 -->
   <view class="version-row">
-    <text>菜菜手帐 1.0.0</text>
-  </view>
-
-  <!-- 退出确认弹窗 -->
-  <view wx:if="{{showLogoutConfirm}}" class="modal-overlay" bindtap="hideLogoutConfirm">
-    <view class="modal-content" catchtap="noop">
-      <text class="modal-title">退出登录</text>
-      <text class="modal-desc">退出后将回到游客模式，本地空间和菜单数据会保留，昵称和头像也不会丢失</text>
-      <view class="form-buttons">
-        <button class="btn btn-ghost form-cancel" bindtap="hideLogoutConfirm">取消</button>
-        <button class="btn btn-danger form-confirm" bindtap="confirmLogout">退出</button>
-      </view>
-    </view>
+    <text>菜菜手帐 2.0.0 · 数据保存在本机</text>
   </view>
 </view>

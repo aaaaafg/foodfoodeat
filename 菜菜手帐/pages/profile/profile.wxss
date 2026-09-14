@@ -5,7 +5,7 @@
   background: #fff;
   border-radius: var(--radius-lg);
   margin: 0 16px;
-  padding: 40px 24px 32px;
+  padding: 40px 24px 28px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -47,33 +47,6 @@
   font-weight: 600;
 }
 
-/* 游客模式标识 */
-.guest-badge {
-  background: rgba(0, 122, 255, 0.08);
-  border: 1px solid rgba(0, 122, 255, 0.2);
-  border-radius: 12px;
-  padding: 6px 16px;
-  margin-bottom: 20px;
-  align-self: center;
-}
-
-.guest-badge text {
-  font-size: 12px;
-  color: #007aff;
-  font-weight: 600;
-}
-
-/* 修改限制提示 */
-.field-lock-hint {
-  font-size: 12px;
-  color: #ff9500;
-  font-weight: 500;
-  margin-top: -6px;
-  margin-bottom: 20px;
-  text-align: center;
-  display: block;
-}
-
 /* 昵称显示 - 大点击区域 */
 .nickname-row {
   display: flex;
@@ -81,7 +54,7 @@
   justify-content: center;
   gap: 8px;
   padding: 14px 32px;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
   min-height: 52px;
   border-radius: var(--radius-sm);
 }
@@ -101,10 +74,16 @@
   font-weight: 500;
 }
 
+.profile-tip {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-bottom: 24px;
+}
+
 /* 昵称编辑 */
 .nickname-edit-row {
   width: 100%;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
   padding: 0 8px;
   box-sizing: border-box;
 }
@@ -125,6 +104,7 @@
 .nickname-edit-buttons {
   display: flex;
   gap: 12px;
+  margin-bottom: 16px;
 }
 
 .nickname-cancel-btn {
@@ -216,49 +196,6 @@
   color: var(--text-tertiary);
   font-weight: 300;
 }
-
-/* 通知设置 */
-.action-text-group {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.action-sub {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-.notify-status-on {
-  font-size: 13px;
-  color: #34c759;
-  font-weight: 500;
-  margin-right: 8px;
-}
-
-.notify-status-off {
-  font-size: 13px;
-  color: var(--primary);
-  font-weight: 500;
-  margin-right: 8px;
-}
-
-/* 退出登录 */
-.logout-section {
-  display: flex;
-  justify-content: center;
-  padding: 24px 16px;
-}
-
-.logout-link {
-  font-size: 16px;
-  color: #ff6b6b;
-  font-weight: 500;
-  padding: 10px 24px;
-}
-
-.logout-link:active { opacity: 0.6; }
 
 /* 版本 */
 .version-row {

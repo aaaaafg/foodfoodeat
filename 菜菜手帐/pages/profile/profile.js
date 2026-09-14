@@ -2,137 +2,41 @@ const storage = require('../../utils/storage')
 
 Page({
   data: {
-    userInfo: null,
     avatarUrl: '',
     nickName: '',
+    nickInitial: '👤',
     editingNickname: false,
     editNickValue: '',
-    showLogoutConfirm: false,
-    spaceCount: 0,
-    isGuest: false,
-    enableNotify: false,
-    cloudBroken: false
+    spaceCount: 0
   },
 
   onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 2 })
     }
-    this.loadProfile()
+    this.load()
   },
 
-  loadProfile() {
-    const userInfo = wx.getStorageSync('userInfo')
-    if (!userInfo || !userInfo._openid) {
-      // 无用户信息（app.js 已保证不会发生，但保留兜底）
-      return
-    }
-    const cloudBroken = !!getApp().globalData.cloudBroken
-    this.setData({ cloudBroken })
-
-    // 游客模式：直接使用本地数据
-    if (storage.isGuest()) {
-      const nick = userInfo.nickName || '游客'
-      this.setData({
-        userInfo,
-        avatarUrl: userInfo.avatarUrl || '',
-        nickName: nick,
-        nickInitial: nick.charAt(0) || '👤',
-        spaceCount: (wx.getStorageSync('guest_spaces') || []).length,
-        isGuest: true,
-        enableNotify: false
-      })
-      return
-    }
-
-    // 云服务不可用：直接使用本地缓存，不发起云请求（避免报错风暴）
-    if (cloudBroken) {
-      const nick = userInfo.nickName || '未命名'
-      this.setData({
-        userInfo,
-        avatarUrl: userInfo.avatarUrl || '',
-        nickName: nick,
-        nickInitial: nick.charAt(0) || '👤',
-        spaceCount: (wx.getStorageSync('offline_' + userInfo._openid + '_spaces') || []).length,
-        isGuest: false,
-        enableNotify: false
-      })
-      return
-    }
-
-    // 真实用户：从云端拉取
-    const db = wx.cloud.database()
-    db.collection('users').where({ _openid: userInfo._openid }).get()
-      .then(res => {
-        if (res.data.length > 0) {
-          const u = res.data[0]
-          // 更新本地缓存
-          wx.setStorageSync('userInfo', u)
-          getApp().globalData.userInfo = u
-          const nick = u.nickName || '未命名'
-          this.setData({
-            userInfo: u,
-            avatarUrl: u.avatarUrl || '',
-            nickName: nick,
-            nickInitial: nick.charAt(0) || '👤'
-          })
-        } else {
-          const nick = userInfo.nickName || '未命名'
-          this.setData({ userInfo, nickName: nick, nickInitial: nick.charAt(0) || '👤' })
-        }
-      })
-      .catch(() => {
-        getApp().markCloudBroken()
-        const nick = userInfo.nickName || '未命名'
-        this.setData({ userInfo, nickName: nick, nickInitial: nick.charAt(0) || '👤' })
-      })
-
-    db.collection('space_members').where({ _openid: userInfo._openid }).count()
-      .then(res => this.setData({ spaceCount: res.total || 0 }))
-      .catch(() => {
-        getApp().markCloudBroken()
-        this.setData({ spaceCount: (wx.getStorageSync('offline_' + userInfo._openid + '_spaces') || []).length })
-      })
-
-    this.setData({ enableNotify: !!wx.getStorageSync('notifyEnabled') })
+  load() {
+    const profile = storage.getProfile() || {}
+    const nick = profile.nickName || '我'
+    this.setData({
+      avatarUrl: profile.avatarUrl || '',
+      nickName: nick,
+      nickInitial: nick.charAt(0) || '👤',
+      spaceCount: storage.getSpaces().length
+    })
   },
 
   onChooseAvatar(e) {
     const { avatarUrl } = e.detail
     // 用户取消选择
     if (!avatarUrl) return
-    // 游客模式：本地头像，转为 base64 持久化存储
-    if (storage.isGuest()) {
-      this.persistGuestAvatar(avatarUrl)
-      return
-    }
-    // 云服务不可用：头像转 base64 存本机
-    if (getApp().globalData.cloudBroken) {
-      this.persistGuestAvatar(avatarUrl)
-      wx.showToast({ title: '云服务不可用，头像仅保存在本机', icon: 'none' })
-      return
-    }
-    // 真实用户：上传到云存储
-    wx.cloud.uploadFile({
-      cloudPath: 'avatars/' + Date.now() + '_' + Math.random().toString(36).slice(2, 6) + '.png',
-      filePath: avatarUrl
-    }).then(res => {
-      const fileID = res.fileID
-      this.setData({ avatarUrl: fileID })
-      this.updateUserField('avatarUrl', fileID)
-      // 同步到持久化个人资料
-      storage.savePersistentProfile({ avatarUrl: fileID })
-      wx.showToast({ title: '头像已更新', icon: 'success' })
-    }).catch(() => {
-      getApp().markCloudBroken()
-      // 上传失败：转 base64 存本机，头像不丢失
-      this.persistGuestAvatar(avatarUrl)
-      wx.showToast({ title: '云端上传失败，已保存在本机', icon: 'none' })
-    })
+    this.persistAvatar(avatarUrl)
   },
 
-  // 游客/离线头像持久化：先压缩再转 base64，避免原图超出本地存储 1MB 限制导致保存失败
-  persistGuestAvatar(tempPath) {
+  // 头像持久化：先压缩再转 base64，避免原图超出本地存储 1MB 限制导致保存失败
+  persistAvatar(tempPath) {
     wx.compressImage({
       src: tempPath,
       quality: 60,
@@ -150,26 +54,15 @@ Page({
       const ext = (path.match(/\.(\w+)(?:\?|$)/) || [])[1] || 'jpg'
       const base64Url = `data:image/${ext};base64,${data}`
       this.setData({ avatarUrl: base64Url })
-      const userInfo = wx.getStorageSync('userInfo')
-      if (userInfo) {
-        userInfo.avatarUrl = base64Url
-        wx.setStorageSync('userInfo', userInfo)
-        getApp().globalData.userInfo = userInfo
-      }
-      // 同步到持久化个人资料
-      storage.savePersistentProfile({ avatarUrl: base64Url })
+      storage.saveProfile({ avatarUrl: base64Url })
+      getApp().globalData.profile = storage.getProfile()
       wx.showToast({ title: '头像已更新', icon: 'success' })
     } catch (err) {
       console.error('[profile] 头像持久化失败:', err)
       // 降级：仍保存临时路径（至少本次会话可用）
       this.setData({ avatarUrl: path })
-      const userInfo = wx.getStorageSync('userInfo')
-      if (userInfo) {
-        userInfo.avatarUrl = path
-        wx.setStorageSync('userInfo', userInfo)
-        getApp().globalData.userInfo = userInfo
-      }
-      storage.savePersistentProfile({ avatarUrl: path })
+      storage.saveProfile({ avatarUrl: path })
+      getApp().globalData.profile = storage.getProfile()
       wx.showToast({ title: '头像已更新（重启后可能失效）', icon: 'none' })
     }
   },
@@ -177,120 +70,38 @@ Page({
   startEditNickname() {
     this.setData({ editingNickname: true, editNickValue: this.data.nickName })
   },
+
   cancelEditNickname() {
     this.setData({ editingNickname: false })
   },
+
   onNicknameInput(e) {
     this.setData({ editNickValue: e.detail.value })
   },
+
   confirmEditNickname() {
     const name = this.data.editNickValue.trim()
     if (!name) {
       wx.showToast({ title: '昵称不能为空', icon: 'none' })
       return
     }
-    this.setData({ nickName: name, nickInitial: name.charAt(0) || '👤', editingNickname: false })
-    this.updateUserField('nickName', name)
-    const userInfo = wx.getStorageSync('userInfo')
-    userInfo.nickName = name
-    wx.setStorageSync('userInfo', userInfo)
-    getApp().globalData.userInfo = userInfo
-    // 同步到持久化个人资料
-    storage.savePersistentProfile({ nickName: name })
+    this.setData({
+      nickName: name,
+      nickInitial: name.charAt(0) || '👤',
+      editingNickname: false
+    })
+    storage.saveProfile({ nickName: name })
+    getApp().globalData.profile = storage.getProfile()
     wx.showToast({ title: '昵称已更新', icon: 'success' })
   },
 
-  updateUserField(field, value) {
-    if (storage.isGuest()) return
-    const userInfo = this.data.userInfo
-    if (!userInfo || !userInfo._id) return
-    if (getApp().globalData.cloudBroken) {
-      // 本地已保存，云不可用时静默跳过（避免和「昵称已更新」提示重叠）
-      return
-    }
-    const db = wx.cloud.database()
-    db.collection('users').doc(userInfo._id).update({
-      data: { [field]: value, updatedAt: Date.now() }
-    }).catch(() => {
-      getApp().markCloudBroken()
-      wx.showToast({ title: '已保存在本机（云端同步失败）', icon: 'none' })
-    })
-  },
-
-  // 游客跳转登录页
-  goToLogin() {
-    if (getApp().globalData.cloudBroken) {
-      wx.showToast({ title: '云服务不可用，暂无法登录', icon: 'none' })
-      return
-    }
-    wx.navigateTo({ url: '/pages/login/login' })
+  goToSpace() {
+    wx.switchTab({ url: '/pages/space/space' })
   },
 
   // 使用说明：跳到菜单页并触发新手引导
   showGuide() {
     wx.setStorageSync('showGuideFlag', true)
-    wx.switchTab({ url: '/pages/space/space' })
-  },
-
-  showLogout() {
-    this.setData({ showLogoutConfirm: true })
-  },
-  hideLogoutConfirm() {
-    this.setData({ showLogoutConfirm: false })
-  },
-  confirmLogout() {
-    // 清理登录态数据（保留本地空间和菜单数据）
-    wx.removeStorageSync('userInfo')
-    wx.removeStorageSync('activeSpaceId')
-    getApp().globalData.userInfo = null
-    getApp().globalData.activeSpaceId = ''
-    getApp().globalData.activeSpaceInfo = null
-    this.setData({ showLogoutConfirm: false })
-    // 退出后重建游客身份（保留持久化资料和本地数据）
-    const app = getApp()
-    app.createGuestUser()
-    app.loadState()
-    wx.showToast({ title: '已退出，回到游客模式', icon: 'success', duration: 1200 })
-    setTimeout(() => {
-      wx.switchTab({ url: '/pages/space/space' })
-    }, 1300)
-  },
-
-  requestNotification() {
-    if (this.data.isGuest) {
-      wx.showToast({ title: '游客模式不支持通知', icon: 'none' })
-      return
-    }
-    // 未申请订阅消息模板前占位，避免用占位 ID 调用接口必然失败
-    const TMPL_ID = 'YOUR_TEMPLATE_ID_HERE'
-    if (!TMPL_ID || TMPL_ID === 'YOUR_TEMPLATE_ID_HERE') {
-      wx.showToast({ title: '通知功能即将上线', icon: 'none' })
-      return
-    }
-    if (getApp().globalData.cloudBroken) {
-      wx.showToast({ title: '云服务不可用，暂无法订阅通知', icon: 'none' })
-      return
-    }
-    wx.requestSubscribeMessage({
-      tmplIds: [TMPL_ID],
-      success: (res) => {
-        if (res[TMPL_ID] === 'accept') {
-          this.setData({ enableNotify: true })
-          wx.setStorageSync('notifyEnabled', true)
-          wx.showToast({ title: '订阅成功', icon: 'success' })
-        } else if (res[TMPL_ID] === 'reject') {
-          this.setData({ enableNotify: false })
-          wx.setStorageSync('notifyEnabled', false)
-          wx.showToast({ title: '已取消订阅', icon: 'none' })
-        }
-      },
-      fail: () => {
-        wx.showToast({ title: '订阅失败，请稍后重试', icon: 'none' })
-      }
-    })
-  },
-
-  goToSpace() {
     wx.switchTab({ url: '/pages/space/space' })
   },
 

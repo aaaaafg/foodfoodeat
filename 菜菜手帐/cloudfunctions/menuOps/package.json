@@ -1,9 +1,0 @@
-{
-  "name": "menuOps",
-  "version": "1.0.0",
-  "description": "菜单操作云函数，绕过权限限制实现共享空间",
-  "main": "index.js",
-  "dependencies": {
-    "wx-server-sdk": "latest"
-  }
-}

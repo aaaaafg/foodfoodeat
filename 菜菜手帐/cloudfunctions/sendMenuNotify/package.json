@@ -1,9 +1,0 @@
-{
-  "name": "sendMenuNotify",
-  "version": "1.0.0",
-  "description": "菜单更新订阅消息通知，15分钟防抖",
-  "main": "index.js",
-  "dependencies": {
-    "wx-server-sdk": "latest"
-  }
-}

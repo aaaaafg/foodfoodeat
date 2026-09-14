@@ -39,22 +39,6 @@
   color: var(--text);
 }
 
-.history-people {
-  font-size: 12px;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.history-card-space {
-  font-size: 12px;
-  color: var(--primary);
-  font-weight: 500;
-  background: rgba(0, 122, 255, 0.06);
-  padding: 2px 10px;
-  border-radius: 10px;
-  align-self: flex-start;
-}
-
 .history-header-right {
   display: flex;
   align-items: center;
@@ -148,11 +132,6 @@
   font-weight: 600;
 }
 
-.history-dish-author {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
 .history-dish-note {
   font-size: 13px;
   color: var(--text-secondary);
@@ -170,59 +149,6 @@
 .clear-all-bar .btn-ghost {
   padding: 12px 28px;
   font-size: 14px;
-  color: var(--text-tertiary);
-}
-
-/* 加载状态 */
-.loading-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 120px 40px;
-}
-
-.loading-spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--bg);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-bottom: 12px;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.loading-text {
-  font-size: 14px;
-  color: var(--text-tertiary);
-}
-
-/* 加载更多 */
-.load-more-bar {
-  display: flex;
-  justify-content: center;
-  padding: 12px 16px;
-}
-
-.load-more-btn {
-  padding: 10px 32px;
-  font-size: 14px;
-  color: var(--primary);
-  font-weight: 500;
-}
-
-.loading-inline {
-  display: flex;
-  justify-content: center;
-  padding: 8px 16px;
-}
-
-.loading-inline text {
-  font-size: 13px;
   color: var(--text-tertiary);
 }
 

@@ -1,7 +1,6 @@
 {
   "pages": [
     "pages/space/space",
-    "pages/login/login",
     "pages/history/history",
     "pages/profile/profile"
   ],
