@@ -43,13 +43,18 @@
       <text class="action-icon">🔐</text>
       <view class="action-text-group">
         <text class="action-text">登录账号</text>
-        <text class="action-sub">登录后数据云同步，多端共享</text>
+        <text class="action-sub">{{cloudBroken ? '云服务暂不可用' : '登录后数据云同步，多端共享'}}</text>
       </view>
       <text class="action-arrow">›</text>
     </view>
     <view class="action-item" bindtap="goToSpace">
       <text class="action-icon">🏠</text>
       <text class="action-text">管理空间</text>
+      <text class="action-arrow">›</text>
+    </view>
+    <view class="action-item" bindtap="showGuide">
+      <text class="action-icon">📖</text>
+      <text class="action-text">使用说明</text>
       <text class="action-arrow">›</text>
     </view>
   </view>

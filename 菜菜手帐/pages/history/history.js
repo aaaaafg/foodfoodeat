@@ -67,7 +67,6 @@ Page({
           peopleSummary: this.peopleSummary(entry),
           expanded: false
         }))
-        .sort((a, b) => b.date.localeCompare(a.date))
       this.setData({ history, loading: false, hasMore: false })
       return
     }

@@ -21,6 +21,9 @@ Page({
     addFor: 'me',
     canAddForPartner: true,
 
+    // 新手引导
+    showGuide: false,
+
     // 游客模式
     isGuest: false,
     // 云服务不可用时自动降级为本地模式
@@ -36,6 +39,7 @@ Page({
     showCreate: false,
     showJoin: false,
     showLeaveConfirm: false,
+    leaveIsOwner: false,
     showInvite: false,
     showMembers: false,
     selectedSpace: null,
@@ -60,6 +64,7 @@ Page({
     this._cloudOffline = false
     this._expandedIds = new Set()
     this._spaceMembers = []
+    this._watcherFailCount = 0
     // 菜单加载统一由 onShow 处理，避免 onLoad + onShow 双重加载
   },
 
@@ -91,6 +96,9 @@ Page({
     }
 
     this.loadSpaces()
+
+    // 首次进入 / 从「使用说明」入口进来时显示新手引导
+    this.maybeShowGuide()
 
     // Reload from DB if space changed, date changed, or menu never loaded.
     // On simple tab switch, local state is still valid — skip reload.
@@ -204,6 +212,30 @@ Page({
         }
       }
     })
+  },
+
+  // ========== 新手引导 ==========
+
+  // 首次进入自动展示；从个人中心「使用说明」进入也会展示
+  maybeShowGuide() {
+    // 「使用说明」入口的标记优先：每次点击都要能打开引导
+    if (wx.getStorageSync('showGuideFlag')) {
+      wx.removeStorageSync('showGuideFlag')
+      this.setData({ showGuide: true })
+      return
+    }
+    // 首次进入只自动展示一次
+    if (this._guideChecked) return
+    this._guideChecked = true
+    if (!wx.getStorageSync('guideShown')) {
+      wx.setStorageSync('guideShown', true)
+      this.setData({ showGuide: true })
+    }
+  },
+
+  closeGuide() {
+    wx.setStorageSync('guideShown', true)
+    this.setData({ showGuide: false })
   },
 
   // 云调用失败时进入本地降级模式（幂等）
@@ -335,8 +367,6 @@ Page({
     const todayKey = getApp().getTodayKey()
     const db = wx.cloud.database()
 
-    this._watcherFailCount = 0
-
     this._watcher = db.collection('menus')
       .where({ spaceId: activeId, date: todayKey })
       .watch({
@@ -435,7 +465,12 @@ Page({
         if (this._cloudOffline) return
         const memberEntries = res.data
         if (memberEntries.length === 0) {
+          // 已不在任何空间：清除残留的活跃空间状态，避免用旧 spaceId 继续查询
           this.setData({ spaceList: [], activeSpaceId: '', spaceName: '' })
+          getApp().setActiveSpace('', null)
+          this._lastMenuSpaceId = ''
+          this._lastSpaceId = ''
+          this.applyMenu('', [], null)
           return
         }
         const spaceIds = memberEntries.map(m => m.spaceId)
@@ -710,7 +745,14 @@ Page({
   showLeave(e) {
     const { id } = e.currentTarget.dataset
     const space = this.data.spaceList.find(s => s._id === id)
-    if (space) this.setData({ showLeaveConfirm: true, selectedSpace: space, showSpaceManager: false })
+    if (space) {
+      this.setData({
+        showLeaveConfirm: true,
+        selectedSpace: space,
+        leaveIsOwner: space.role === 'owner',
+        showSpaceManager: false
+      })
+    }
   },
   hideLeaveConfirm() { this.setData({ showLeaveConfirm: false }) },
 
@@ -808,8 +850,8 @@ Page({
   addDish() {
     const name = this.data.newDishName.trim()
     if (!name) { wx.showToast({ title: '请输入菜品名称', icon: 'none' }); return }
-    // 重复提醒：同一道菜今天已经有人点过了
-    const dup = this.data.menu.items.find(it => (it.name || '').trim() === name)
+    // 重复提醒：同一道菜今天已经有人点过了（忽略大小写和首尾空格）
+    const dup = this.data.menu.items.find(it => (it.name || '').trim().toLowerCase() === name.toLowerCase())
     if (dup) {
       const who = this.isMineItem(dup) ? '你' : (this.data.partnerName || 'TA')
       wx.showModal({

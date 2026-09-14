@@ -10,7 +10,8 @@ Page({
     showLogoutConfirm: false,
     spaceCount: 0,
     isGuest: false,
-    enableNotify: false
+    enableNotify: false,
+    cloudBroken: false
   },
 
   onShow() {
@@ -27,6 +28,7 @@ Page({
       return
     }
     const cloudBroken = !!getApp().globalData.cloudBroken
+    this.setData({ cloudBroken })
 
     // 游客模式：直接使用本地数据
     if (storage.isGuest()) {
@@ -129,30 +131,45 @@ Page({
     })
   },
 
-  // 游客头像持久化：将临时文件转为 base64 存储，避免重启后丢失
+  // 游客/离线头像持久化：先压缩再转 base64，避免原图超出本地存储 1MB 限制导致保存失败
   persistGuestAvatar(tempPath) {
+    wx.compressImage({
+      src: tempPath,
+      quality: 60,
+      success: (res) => this.readAvatarAsBase64(res.tempFilePath),
+      // 压缩失败（个别机型/格式）：直接用原图兜底
+      fail: () => this.readAvatarAsBase64(tempPath)
+    })
+  },
+
+  readAvatarAsBase64(path) {
     const fs = wx.getFileSystemManager()
     try {
-      // 读取临时文件为 base64
-      const data = fs.readFileSync(tempPath, 'base64')
-      // 推断图片格式，默认 png
-      const ext = (tempPath.match(/\.(\w+)(?:\?|$)/) || [])[1] || 'png'
+      const data = fs.readFileSync(path, 'base64')
+      // 压缩后的图片可能没有扩展名，统一按 jpg 处理（compressImage 输出 jpg）
+      const ext = (path.match(/\.(\w+)(?:\?|$)/) || [])[1] || 'jpg'
       const base64Url = `data:image/${ext};base64,${data}`
       this.setData({ avatarUrl: base64Url })
       const userInfo = wx.getStorageSync('userInfo')
-      userInfo.avatarUrl = base64Url
-      wx.setStorageSync('userInfo', userInfo)
+      if (userInfo) {
+        userInfo.avatarUrl = base64Url
+        wx.setStorageSync('userInfo', userInfo)
+        getApp().globalData.userInfo = userInfo
+      }
       // 同步到持久化个人资料
       storage.savePersistentProfile({ avatarUrl: base64Url })
       wx.showToast({ title: '头像已更新', icon: 'success' })
     } catch (err) {
       console.error('[profile] 头像持久化失败:', err)
       // 降级：仍保存临时路径（至少本次会话可用）
-      this.setData({ avatarUrl: tempPath })
+      this.setData({ avatarUrl: path })
       const userInfo = wx.getStorageSync('userInfo')
-      userInfo.avatarUrl = tempPath
-      wx.setStorageSync('userInfo', userInfo)
-      storage.savePersistentProfile({ avatarUrl: tempPath })
+      if (userInfo) {
+        userInfo.avatarUrl = path
+        wx.setStorageSync('userInfo', userInfo)
+        getApp().globalData.userInfo = userInfo
+      }
+      storage.savePersistentProfile({ avatarUrl: path })
       wx.showToast({ title: '头像已更新（重启后可能失效）', icon: 'none' })
     }
   },
@@ -188,7 +205,7 @@ Page({
     const userInfo = this.data.userInfo
     if (!userInfo || !userInfo._id) return
     if (getApp().globalData.cloudBroken) {
-      wx.showToast({ title: '已保存在本机（云端同步失败）', icon: 'none' })
+      // 本地已保存，云不可用时静默跳过（避免和「昵称已更新」提示重叠）
       return
     }
     const db = wx.cloud.database()
@@ -202,7 +219,17 @@ Page({
 
   // 游客跳转登录页
   goToLogin() {
+    if (getApp().globalData.cloudBroken) {
+      wx.showToast({ title: '云服务不可用，暂无法登录', icon: 'none' })
+      return
+    }
     wx.navigateTo({ url: '/pages/login/login' })
+  },
+
+  // 使用说明：跳到菜单页并触发新手引导
+  showGuide() {
+    wx.setStorageSync('showGuideFlag', true)
+    wx.switchTab({ url: '/pages/space/space' })
   },
 
   showLogout() {

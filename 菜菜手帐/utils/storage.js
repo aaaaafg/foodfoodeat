@@ -5,12 +5,12 @@ function getTodayKey() {
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
 }
 
-function formatDate(dateKey) {
-  const [y, m, d] = dateKey.split('-')
-  const weekDays = ['日', '一', '二', '三', '四', '五', '六']
-  const date = new Date(+y, +m - 1, +d)
-  const weekDay = weekDays[date.getDay()]
-  return `${y}年${m}月${d}日 星期${weekDay}`
+// 把 "2026-5-9" 这类日期键转成可比较的数字，
+// 避免字符串排序把 5-9 排在 5-10 后面、11月排在2月前面
+function dateKeyToNum(key) {
+  if (!key) return 0
+  const parts = key.split('-')
+  return (+parts[0] || 0) * 10000 + (+parts[1] || 0) * 100 + (+parts[2] || 0)
 }
 
 // ========== 游客模式判断 ==========
@@ -69,7 +69,7 @@ function guestGetHistory(spaceId, ns) {
       }
     }
   }
-  return history.sort((a, b) => b.date.localeCompare(a.date))
+  return history.sort((a, b) => dateKeyToNum(b.date) - dateKeyToNum(a.date))
 }
 
 function guestClearHistory(spaceId, target, clearDate, ns) {
@@ -153,29 +153,6 @@ function guestLeaveSpace(spaceId, ns) {
   return spaces
 }
 
-// ========== 获取今日菜单（游客+普通兼容） ==========
-function getTodayMenu() {
-  const saved = wx.getStorageSync('todayMenu')
-  const todayKey = getTodayKey()
-  if (saved && saved.date === todayKey) {
-    return saved
-  }
-  return { date: todayKey, items: [] }
-}
-
-function saveTodayMenu(menuData) {
-  menuData.date = getTodayKey()
-  wx.setStorageSync('todayMenu', menuData)
-}
-
-function getHistory() {
-  return wx.getStorageSync('menuHistory') || []
-}
-
-function saveHistory(history) {
-  wx.setStorageSync('menuHistory', history)
-}
-
 // ========== 持久化个人资料（跨登录/登出保持） ==========
 // 无论登录还是游客模式，修改过的昵称和头像都保存在此
 // 退出登录后重建游客时优先读取此配置
@@ -192,36 +169,9 @@ function savePersistentProfile(profile) {
   wx.setStorageSync(GUEST_PROFILE_KEY, merged)
 }
 
-// ========== 15天修改限制 ==========
-
-const FIFTEEN_DAYS = 15 * 24 * 60 * 60 * 1000
-
-function canUpdateField(userInfo, field) {
-  const lastUpdate = userInfo && userInfo[field]
-  if (!lastUpdate) return { can: true }
-  const elapsed = Date.now() - lastUpdate
-  if (elapsed >= FIFTEEN_DAYS) return { can: true }
-  const nextDate = new Date(lastUpdate + FIFTEEN_DAYS)
-  const m = nextDate.getMonth() + 1
-  const d = nextDate.getDate()
-  return { can: false, nextDate: m + '月' + d + '日' }
-}
-
-function getNextAvailableDate(timestamp) {
-  if (!timestamp) return null
-  const nextDate = new Date(timestamp + FIFTEEN_DAYS)
-  const m = nextDate.getMonth() + 1
-  const d = nextDate.getDate()
-  return m + '月' + d + '日'
-}
-
 module.exports = {
   getTodayKey,
-  formatDate,
-  getTodayMenu,
-  saveTodayMenu,
-  getHistory,
-  saveHistory,
+  dateKeyToNum,
   // 游客模式
   isGuest,
   localNs,
@@ -235,9 +185,5 @@ module.exports = {
   guestLeaveSpace,
   // 持久化个人资料
   getPersistentProfile,
-  savePersistentProfile,
-  // 15天限制
-  FIFTEEN_DAYS,
-  canUpdateField,
-  getNextAvailableDate
+  savePersistentProfile
 }

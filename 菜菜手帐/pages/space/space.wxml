@@ -265,11 +265,44 @@
   <view wx:if="{{showLeaveConfirm}}" class="modal-overlay" bindtap="hideLeaveConfirm">
     <view class="modal-content" catchtap="noop">
       <text class="modal-title">退出空间</text>
-      <text class="modal-desc">确定退出「{{selectedSpace.name}}」？</text>
+      <text wx:if="{{leaveIsOwner}}" class="modal-desc">你是创建者，退出后空间将失去管理员，其他成员可能无法继续使用。确定退出吗？</text>
+      <text wx:else class="modal-desc">确定退出「{{selectedSpace.name}}」？</text>
       <view class="form-buttons">
         <button class="btn btn-ghost form-cancel" bindtap="hideLeaveConfirm">取消</button>
         <button class="btn btn-danger form-confirm" bindtap="confirmLeave">确认退出</button>
       </view>
+    </view>
+  </view>
+
+  <!-- 新手引导（首次进入自动展示，个人中心可再次打开） -->
+  <view wx:if="{{showGuide}}" class="guide-overlay" bindtap="closeGuide">
+    <view class="guide-card" catchtap="noop">
+      <text class="guide-emoji">🍽️</text>
+      <text class="guide-title">欢迎使用菜菜手帐</text>
+      <text class="guide-subtitle">三步记好「今天吃什么」</text>
+      <view class="guide-step">
+        <view class="guide-step-num"><text>1</text></view>
+        <view class="guide-step-body">
+          <text class="guide-step-title">记下想吃的菜</text>
+          <text class="guide-step-text">点「添加菜品」记自己想吃的，切到「帮TA点」顺手记下对方的</text>
+        </view>
+      </view>
+      <view class="guide-step">
+        <view class="guide-step-num"><text>2</text></view>
+        <view class="guide-step-body">
+          <text class="guide-step-title">分组一眼看清</text>
+          <text class="guide-step-text">菜单自动分成「我点的」和「TA点的」，顶部还有今日统计</text>
+        </view>
+      </view>
+      <view class="guide-step">
+        <view class="guide-step-num"><text>3</text></view>
+        <view class="guide-step-body">
+          <text class="guide-step-title">一键发给TA</text>
+          <text class="guide-step-text">点右上角分享箭头，把按人分好的菜单发到微信，双方都知道吃什么</text>
+        </view>
+      </view>
+      <text wx:if="{{isGuest}}" class="guide-tip">当前为本地模式：数据保存在本机；以后登录可多设备同步</text>
+      <button class="btn btn-primary guide-btn" bindtap="closeGuide">开始使用</button>
     </view>
   </view>
 </view>

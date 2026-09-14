@@ -81,6 +81,11 @@ Page({
       wx.showToast({ title: '请先阅读并同意用户协议', icon: 'none' })
       return
     }
+    // 云服务不可用：直接提示，不做注定失败的请求
+    if (getApp().globalData.cloudBroken) {
+      wx.showToast({ title: '云服务不可用，暂无法登录', icon: 'none' })
+      return
+    }
     this.setData({ loading: true })
 
     // 昵称和头像已通过页面顶部的 chooseAvatar 按钮和 input 组件收集
@@ -95,12 +100,26 @@ Page({
 
         const processAvatar = () => {
           if (!localAvatar) return Promise.resolve('')
-          if (localAvatar.startsWith('http') || localAvatar.startsWith('cloud://')) return Promise.resolve(localAvatar)
-          if (localAvatar.startsWith('data:image')) return Promise.resolve(localAvatar)
-          return wx.cloud.uploadFile({
+          // 已是云存储文件 ID，直接使用
+          if (localAvatar.startsWith('cloud://')) return Promise.resolve(localAvatar)
+          const upload = (filePath) => wx.cloud.uploadFile({
             cloudPath: `avatars/${openid}_${Date.now()}.png`,
-            filePath: localAvatar
+            filePath
           }).then(r => r.fileID).catch(() => '')
+          // base64 头像（游客模式改过头像）：先写成临时文件再上传
+          if (localAvatar.startsWith('data:image')) {
+            const fs = wx.getFileSystemManager()
+            const filePath = `${wx.env.USER_DATA_PATH}/avatar_${Date.now()}.png`
+            try {
+              fs.writeFileSync(filePath, localAvatar.split(',')[1], 'base64')
+              return upload(filePath)
+            } catch (e) {
+              console.warn('[login] base64 头像写入失败:', e)
+              return Promise.resolve('')
+            }
+          }
+          // chooseAvatar 返回的临时文件路径，直接上传
+          return upload(localAvatar)
         }
 
         processAvatar().then(avatarFileID => {
