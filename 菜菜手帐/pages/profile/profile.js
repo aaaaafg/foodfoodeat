@@ -30,10 +30,12 @@ Page({
 
     // 游客模式：直接使用本地数据
     if (storage.isGuest()) {
+      const nick = userInfo.nickName || '游客'
       this.setData({
         userInfo,
         avatarUrl: userInfo.avatarUrl || '',
-        nickName: userInfo.nickName || '游客',
+        nickName: nick,
+        nickInitial: nick.charAt(0) || '👤',
         spaceCount: (wx.getStorageSync('guest_spaces') || []).length,
         isGuest: true,
         enableNotify: false
@@ -43,10 +45,12 @@ Page({
 
     // 云服务不可用：直接使用本地缓存，不发起云请求（避免报错风暴）
     if (cloudBroken) {
+      const nick = userInfo.nickName || '未命名'
       this.setData({
         userInfo,
         avatarUrl: userInfo.avatarUrl || '',
-        nickName: userInfo.nickName || '未命名',
+        nickName: nick,
+        nickInitial: nick.charAt(0) || '👤',
         spaceCount: (wx.getStorageSync('offline_' + userInfo._openid + '_spaces') || []).length,
         isGuest: false,
         enableNotify: false
@@ -63,18 +67,22 @@ Page({
           // 更新本地缓存
           wx.setStorageSync('userInfo', u)
           getApp().globalData.userInfo = u
+          const nick = u.nickName || '未命名'
           this.setData({
             userInfo: u,
             avatarUrl: u.avatarUrl || '',
-            nickName: u.nickName || '未命名'
+            nickName: nick,
+            nickInitial: nick.charAt(0) || '👤'
           })
         } else {
-          this.setData({ userInfo, nickName: userInfo.nickName || '未命名' })
+          const nick = userInfo.nickName || '未命名'
+          this.setData({ userInfo, nickName: nick, nickInitial: nick.charAt(0) || '👤' })
         }
       })
       .catch(() => {
         getApp().markCloudBroken()
-        this.setData({ userInfo, nickName: userInfo.nickName || '未命名' })
+        const nick = userInfo.nickName || '未命名'
+        this.setData({ userInfo, nickName: nick, nickInitial: nick.charAt(0) || '👤' })
       })
 
     db.collection('space_members').where({ _openid: userInfo._openid }).count()
@@ -164,7 +172,7 @@ Page({
       wx.showToast({ title: '昵称不能为空', icon: 'none' })
       return
     }
-    this.setData({ nickName: name, editingNickname: false })
+    this.setData({ nickName: name, nickInitial: name.charAt(0) || '👤', editingNickname: false })
     this.updateUserField('nickName', name)
     const userInfo = wx.getStorageSync('userInfo')
     userInfo.nickName = name

@@ -11,12 +11,22 @@ Page({
     newDishName: '',
     newDishNote: '',
     menuDocId: null,
-    watcherReady: false,
+
+    // 按人分组的今日菜单：我点的 / TA点的
+    myDishes: [],
+    otherDishes: [],
+    partnerName: 'TA',
+    stats: { total: 0, mine: 0, theirs: 0 },
+    // 添加菜品归属：帮我点 / 帮TA点
+    addFor: 'me',
+    canAddForPartner: true,
 
     // 游客模式
     isGuest: false,
     // 云服务不可用时自动降级为本地模式
     cloudOffline: false,
+    // 本地模式（游客或离线）
+    isLocal: false,
 
     // 空间
     spaceList: [],
@@ -48,6 +58,8 @@ Page({
     this._lastSpaceId = null
     this._guest = storage.isGuest()
     this._cloudOffline = false
+    this._expandedIds = new Set()
+    this._spaceMembers = []
     // 菜单加载统一由 onShow 处理，避免 onLoad + onShow 双重加载
   },
 
@@ -57,7 +69,11 @@ Page({
     // 若沿用旧状态会继续走云路径导致持续超时报错
     this._guest = storage.isGuest()
     this._cloudOffline = !this._guest && !!getApp().globalData.cloudBroken
-    this.setData({ isGuest: this._guest, cloudOffline: this._cloudOffline })
+    this.setData({
+      isGuest: this._guest,
+      cloudOffline: this._cloudOffline,
+      isLocal: this._guest || this._cloudOffline
+    })
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 0 })
     }
@@ -71,7 +87,7 @@ Page({
       this.stopWatcher()
       this._lastSpaceId = currentSpaceId
       this._menuLoaded = false
-      this.setData({ menu: { date: '', items: [] }, menuDocId: null })
+      this.applyMenu('', [], null)
     }
 
     this.loadSpaces()
@@ -113,6 +129,83 @@ Page({
     return storage.localNs()
   },
 
+  // ========== 按人分组 ==========
+
+  // 这道菜是不是「我」点的
+  isMineItem(item) {
+    if (!item) return true
+    const userInfo = wx.getStorageSync('userInfo') || {}
+    if (item.addedByOpenid) {
+      // 帮TA点的菜固定记在对方名下
+      if (item.addedByOpenid === 'partner') return false
+      // 真实用户按 openid 判断；游客模式下除 partner 外都算我的
+      if (userInfo._openid && userInfo._openid !== 'guest_user') {
+        return item.addedByOpenid === userInfo._openid
+      }
+      return true
+    }
+    // 旧数据没有归属标记，默认算我点的
+    return true
+  },
+
+  // 对方的名字：优先使用用户自己设置的名字，其次取空间成员
+  getPartnerInfo() {
+    const activeId = getApp().globalData.activeSpaceId
+    const saved = activeId ? wx.getStorageSync('partnerName_' + activeId) : ''
+    if (saved) return { name: saved, openid: null, available: true }
+    const userInfo = wx.getStorageSync('userInfo') || {}
+    const list = this._spaceMembers || []
+    const other = list.find(m => m._openid && m._openid !== userInfo._openid)
+    if (other && other.nickName) return { name: other.nickName, openid: other._openid, available: true }
+    return { name: 'TA', openid: null, available: false }
+  },
+
+  // 根据归属把菜单拆成「我点的」和「TA点的」两份视图
+  buildMenuView(items) {
+    const myDishes = []
+    const otherDishes = []
+    ;(items || []).forEach(it => {
+      const dish = { ...it, expanded: this._expandedIds.has(it.id) }
+      if (this.isMineItem(it)) myDishes.push(dish)
+      else otherDishes.push(dish)
+    })
+    const partner = this.getPartnerInfo()
+    return {
+      myDishes,
+      otherDishes,
+      partnerName: partner.name,
+      stats: { total: items.length, mine: myDishes.length, theirs: otherDishes.length }
+    }
+  },
+
+  // 统一入口：更新菜单数据并重算分组视图
+  applyMenu(date, items, docId) {
+    const patch = { 'menu.date': date, 'menu.items': items, ...this.buildMenuView(items) }
+    if (docId !== undefined) patch.menuDocId = docId
+    this.setData(patch)
+  },
+
+  // 点击 TA 的分组标题可以设置对方的名字
+  editPartnerName() {
+    const current = this.data.partnerName !== 'TA' ? this.data.partnerName : ''
+    wx.showModal({
+      title: 'TA 的名字',
+      editable: true,
+      placeholderText: '输入TA的昵称，比如「小美」',
+      content: current,
+      confirmColor: '#007aff',
+      success: (res) => {
+        if (res.confirm) {
+          const name = (res.content || '').trim() || 'TA'
+          const activeId = getApp().globalData.activeSpaceId
+          if (activeId) wx.setStorageSync('partnerName_' + activeId, name)
+          this.setData(this.buildMenuView(this.data.menu.items))
+          wx.showToast({ title: '已设置', icon: 'success', duration: 800 })
+        }
+      }
+    })
+  },
+
   // 云调用失败时进入本地降级模式（幂等）
   enterOfflineMode(reason, skipReload) {
     console.warn('[space] 进入本地模式:', reason || '云调用失败')
@@ -120,7 +213,7 @@ Page({
     this.stopWatcher()
     if (!this._cloudOffline) {
       this._cloudOffline = true
-      this.setData({ cloudOffline: true })
+      this.setData({ cloudOffline: true, isLocal: true })
       wx.showToast({ title: '云服务不可用，已切换本地模式', icon: 'none', duration: 2500 })
     }
     if (!skipReload) {
@@ -134,7 +227,7 @@ Page({
     const app = getApp()
     app.clearCloudBroken()
     this._cloudOffline = false
-    this.setData({ cloudOffline: false })
+    this.setData({ cloudOffline: false, isLocal: this._guest })
     this.stopWatcher()
     this._menuLoaded = false
     this.loadSpaces()
@@ -180,17 +273,9 @@ Page({
     if (this._guest || this._cloudOffline) {
       const { doc } = storage.guestGetMenu(activeId, this.localNs())
       if (doc) {
-        this.setData({
-          menu: { date: doc.date, items: doc.items || [] },
-          menuDocId: activeId + '_' + todayKey,
-          watcherReady: true
-        })
+        this.applyMenu(doc.date, doc.items || [], activeId + '_' + todayKey)
       } else {
-        this.setData({
-          menu: { date: todayKey, items: [] },
-          menuDocId: null,
-          watcherReady: true
-        })
+        this.applyMenu(todayKey, [], null)
       }
       return
     }
@@ -216,31 +301,18 @@ Page({
             db.collection('menus').doc(keepId).update({
               data: { items: allItems, updatedAt: Date.now() }
             })
-            this.setData({
-              menu: { date: doc.date, items: allItems },
-              menuDocId: keepId,
-              watcherReady: true
-            })
+            this.applyMenu(doc.date, allItems, keepId)
           } else {
-            this.setData({
-              menu: { date: doc.date, items: doc.items || [] },
-              menuDocId: doc._id,
-              watcherReady: true
-            })
+            this.applyMenu(doc.date, doc.items || [], doc._id)
           }
           this.startWatcher()
         } else {
-          this.setData({
-            menu: { date: todayKey, items: [] },
-            menuDocId: null,
-            watcherReady: true
-          })
+          this.applyMenu(todayKey, [], null)
           this.startWatcher()
         }
       })
       .catch(err => {
         console.error('[space] load fail:', err)
-        this.setData({ watcherReady: true })
         this.enterOfflineMode('菜单加载失败: ' + (err && err.errMsg ? err.errMsg : ''))
       })
   },
@@ -278,16 +350,10 @@ Page({
           if (snapshot.docs.length > 0) {
             const doc = snapshot.docs[0]
             if (doc.items) {
-              this.setData({
-                menu: { date: doc.date, items: doc.items },
-                menuDocId: doc._id
-              })
+              this.applyMenu(doc.date, doc.items, doc._id)
             }
           } else {
-            this.setData({
-              menu: { date: todayKey, items: [] },
-              menuDocId: null
-            })
+            this.applyMenu(todayKey, [], null)
           }
         },
         onError: (err) => {
@@ -379,6 +445,8 @@ Page({
         ]).then(([spaceRes, allMembersRes]) => {
             const spaces = spaceRes.data
             const allMembers = allMembersRes.data
+            // 缓存空间成员，用于识别「TA」的名字和 openid
+            this._spaceMembers = allMembers
             const countMap = {}
             allMembers.forEach(m => {
               countMap[m.spaceId] = (countMap[m.spaceId] || 0) + 1
@@ -425,7 +493,7 @@ Page({
       this.setData({ activeSpaceId: id, spaceName: space.name, showSpaceManager: false })
       getApp().setActiveSpace(id, space)
       this._menuLoaded = false
-      this.setData({ menu: { date: '', items: [] }, menuDocId: null })
+      this.applyMenu('', [], null)
       this.loadMenu()
       wx.showToast({ title: `已切换到「${space.name}」`, icon: 'success', duration: 1000 })
     }
@@ -449,26 +517,30 @@ Page({
   hideMembers() { this.setData({ showMembers: false }) },
 
   fetchMembers(spaceId) {
+    const withInitial = list => (list || []).map(m => ({
+      ...m,
+      initial: (m.nickName || '').charAt(0) || '👤'
+    }))
     if (this._guest || this._cloudOffline) {
       // 从空间的 members 数组读取，若无则从用户信息构造
       const space = this.data.spaceList.find(s => s._id === spaceId)
       const userInfo = wx.getStorageSync('userInfo')
       if (space && space.members && space.members.length > 0) {
-        this.setData({ members: space.members })
+        this.setData({ members: withInitial(space.members) })
       } else {
         const profile = wx.getStorageSync('persistentProfile') || {}
         this.setData({
-          members: [{
+          members: withInitial([{
             nickName: profile.nickName || userInfo.nickName || '游客',
             role: (space && space.role) || 'owner'
-          }]
+          }])
         })
       }
       return
     }
     const db = wx.cloud.database()
     db.collection('space_members').where({ spaceId }).get()
-      .then(res => this.setData({ members: res.data }))
+      .then(res => this.setData({ members: withInitial(res.data) }))
       .catch(() => {})
   },
 
@@ -496,7 +568,7 @@ Page({
       this.setData({ showCreate: false, spaceList: list, activeSpaceId: space._id, spaceName: name, submitting: false })
       getApp().setActiveSpace(space._id, space)
       this._menuLoaded = false
-      this.setData({ menu: { date: '', items: [] }, menuDocId: null })
+      this.applyMenu('', [], null)
       this.loadMenu()
       wx.showToast({ title: '创建成功', icon: 'success' })
       return
@@ -519,7 +591,7 @@ Page({
         this.setData({ showCreate: false, spaceList: list, activeSpaceId: spaceId, spaceName: name, submitting: false })
         getApp().setActiveSpace(spaceId, space)
         this._menuLoaded = false
-        this.setData({ menu: { date: '', items: [] }, menuDocId: null })
+        this.applyMenu('', [], null)
         this.loadMenu()
         wx.showToast({ title: '创建成功', icon: 'success' })
       }).catch(err => {
@@ -565,7 +637,7 @@ Page({
       this.setData({ showJoin: false, spaceList: list, activeSpaceId: space._id, spaceName: space.name, submitting: false })
       getApp().setActiveSpace(space._id, space)
       this._menuLoaded = false
-      this.setData({ menu: { date: '', items: [] }, menuDocId: null })
+      this.applyMenu('', [], null)
       this.loadMenu()
       wx.showToast({ title: '加入成功', icon: 'success' })
       return
@@ -603,7 +675,7 @@ Page({
               this.setData({ showJoin: false, spaceList: list, activeSpaceId: space._id, spaceName: space.name, submitting: false })
               getApp().setActiveSpace(space._id, space)
               this._menuLoaded = false
-              this.setData({ menu: { date: '', items: [] }, menuDocId: null })
+              this.applyMenu('', [], null)
               this.loadMenu()
               wx.showToast({ title: '加入成功', icon: 'success' })
             })
@@ -618,6 +690,10 @@ Page({
 
   // 邀请
   showInvite(e) {
+    if (this._guest || this._cloudOffline) {
+      wx.showToast({ title: '登录后可用邀请码邀请TA', icon: 'none' })
+      return
+    }
     const { id } = e.currentTarget.dataset
     const space = this.data.spaceList.find(s => s._id === id)
     if (space) this.setData({ showInvite: true, selectedSpace: space, showSpaceManager: false })
@@ -657,7 +733,7 @@ Page({
         this.stopWatcher()
         getApp().setActiveSpace(newActiveId, newActive)
         this._menuLoaded = false
-        this.setData({ menu: { date: '', items: [] }, menuDocId: null })
+        this.applyMenu('', [], null)
         this.loadMenu()
       } else {
         getApp().setActiveSpace('', null)
@@ -693,7 +769,7 @@ Page({
           this.stopWatcher()
           getApp().setActiveSpace(newActiveId, newActive)
           this._menuLoaded = false
-          this.setData({ menu: { date: '', items: [] }, menuDocId: null })
+          this.applyMenu('', [], null)
           this.loadMenu()
         } else {
           getApp().setActiveSpace('', null)
@@ -707,21 +783,14 @@ Page({
       })
   },
 
-  getTypeIcon(type) {
-    const t = this.data.spaceTypes.find(s => s.key === type)
-    return t ? t.icon : '✨'
-  },
-
   // ========== 菜品操作 ==========
 
+  // 展开/收起备注：纯本地视图状态，不写入存储
   toggleNote(e) {
     const { id } = e.currentTarget.dataset
-    const items = this.data.menu.items.map(item => {
-      if (item.id === id) return { ...item, expanded: !item.expanded }
-      return item
-    })
-    this.setData({ 'menu.items': items })
-    this.saveMenuToCloud(items)
+    if (this._expandedIds.has(id)) this._expandedIds.delete(id)
+    else this._expandedIds.add(id)
+    this.setData(this.buildMenuView(this.data.menu.items))
   },
 
   showAddModal() { this.setData({ showModal: true, newDishName: '', newDishNote: '' }) },
@@ -729,29 +798,62 @@ Page({
   onNameInput(e) { this.setData({ newDishName: e.detail.value }) },
   onNoteInput(e) { this.setData({ newDishNote: e.detail.value }) },
 
+  setAddForMe() { this.setData({ addFor: 'me' }) },
+  setAddForPartner() { this.setData({ addFor: 'partner' }) },
+  addForPartner() {
+    this.setData({ addFor: 'partner' })
+    this.showAddModal()
+  },
+
   addDish() {
     const name = this.data.newDishName.trim()
     if (!name) { wx.showToast({ title: '请输入菜品名称', icon: 'none' }); return }
-    const userInfo = wx.getStorageSync('userInfo')
+    // 重复提醒：同一道菜今天已经有人点过了
+    const dup = this.data.menu.items.find(it => (it.name || '').trim() === name)
+    if (dup) {
+      const who = this.isMineItem(dup) ? '你' : (this.data.partnerName || 'TA')
+      wx.showModal({
+        title: '这道菜今天点过啦',
+        content: `${who}已经点了「${name}」，还要再加一份吗？`,
+        confirmColor: '#007aff',
+        success: (res) => { if (res.confirm) this.doAddDish(name) }
+      })
+      return
+    }
+    this.doAddDish(name)
+  },
+
+  doAddDish(name) {
+    const userInfo = wx.getStorageSync('userInfo') || {}
+    const partner = this.getPartnerInfo()
+    const forPartner = this.data.addFor === 'partner'
     const item = {
       id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
-      name, note: this.data.newDishNote.trim(), expanded: false,
-      addedBy: (userInfo && userInfo.nickName) || '匿名', addedAt: Date.now()
+      name,
+      note: this.data.newDishNote.trim(),
+      addedBy: forPartner ? (partner.name || 'TA') : (userInfo.nickName || '游客'),
+      addedByOpenid: forPartner ? (partner.openid || 'partner') : (userInfo._openid || 'guest_user'),
+      addedAt: Date.now()
     }
     const items = [...this.data.menu.items, item]
-    this.setData({ 'menu.items': items, showModal: false })
+    this.setData({ showModal: false, newDishName: '', newDishNote: '', addFor: 'me' })
+    this.applyMenu(this.data.menu.date || getApp().getTodayKey(), items)
     this.saveMenuToCloud(items)
-    wx.showToast({ title: '添加成功', icon: 'success', duration: 1000 })
+    wx.showToast({ title: forPartner ? `已帮${partner.name || 'TA'}加菜` : '添加成功', icon: 'success', duration: 1000 })
   },
 
   deleteDish(e) {
     const { id } = e.currentTarget.dataset
+    const item = this.data.menu.items.find(it => it.id === id)
+    const who = item && !this.isMineItem(item) ? (this.data.partnerName || 'TA') : '你'
     wx.showModal({
-      title: '删除菜品', content: '确定要删除这道菜吗？', confirmColor: '#ff3b30',
+      title: '删除菜品',
+      content: `确定要删除${who}点的这道菜吗？`,
+      confirmColor: '#ff3b30',
       success: (res) => {
         if (res.confirm) {
-          const items = this.data.menu.items.filter(item => item.id !== id)
-          this.setData({ 'menu.items': items })
+          const items = this.data.menu.items.filter(it => it.id !== id)
+          this.applyMenu(this.data.menu.date || getApp().getTodayKey(), items)
           this.saveMenuToCloud(items)
           wx.showToast({ title: '已删除', icon: 'success', duration: 1000 })
         }
@@ -766,7 +868,8 @@ Page({
   hideClearConfirm() { this.setData({ showClearConfirm: false }) },
 
   confirmClear() {
-    this.setData({ 'menu.items': [], showClearConfirm: false })
+    this.applyMenu(this.data.menu.date || getApp().getTodayKey(), [])
+    this.setData({ showClearConfirm: false })
     this.saveMenuToCloud([])
     wx.showToast({ title: '已清空', icon: 'success', duration: 1000 })
   },
@@ -781,9 +884,12 @@ Page({
     }
     const spaceInfo = getApp().globalData.activeSpaceInfo
 
+    // 展开/收起是个人视图状态，不入库
+    const cleanItems = items.map(({ expanded, ...rest }) => rest)
+
     // 游客/离线模式：存本地
     if (this._guest || this._cloudOffline) {
-      storage.guestSaveMenu(spaceId, spaceInfo ? spaceInfo.name : '', items, this.localNs())
+      storage.guestSaveMenu(spaceId, spaceInfo ? spaceInfo.name : '', cleanItems, this.localNs())
       console.log('[space] local save ok')
       return
     }
@@ -791,7 +897,7 @@ Page({
     const todayKey = getApp().getTodayKey()
     const db = wx.cloud.database()
 
-    const saveData = { spaceId, spaceName: spaceInfo ? spaceInfo.name : '', date: todayKey, items, updatedAt: Date.now() }
+    const saveData = { spaceId, spaceName: spaceInfo ? spaceInfo.name : '', date: todayKey, items: cleanItems, updatedAt: Date.now() }
 
     if (this.data.menuDocId) {
       db.collection('menus').doc(this.data.menuDocId).update({ data: saveData })
@@ -811,7 +917,7 @@ Page({
           const doc = res.data[0]
           const merged = new Map()
           ;(doc.items || []).forEach(i => merged.set(i.id, i))
-          items.forEach(i => merged.set(i.id, i))
+          cleanItems.forEach(i => merged.set(i.id, i))
           const allItems = [...merged.values()]
           db.collection('menus').doc(doc._id).update({
             data: { ...saveData, items: allItems }
@@ -846,7 +952,8 @@ Page({
 
   // 云保存失败：先写入本地兜底，再切换离线模式，避免用户数据丢失
   saveFailFallback(spaceId, spaceInfo, items) {
-    storage.guestSaveMenu(spaceId, spaceInfo ? spaceInfo.name : '', items, this.localNs())
+    const cleanItems = items.map(({ expanded, ...rest }) => rest)
+    storage.guestSaveMenu(spaceId, spaceInfo ? spaceInfo.name : '', cleanItems, this.localNs())
     this.enterOfflineMode('云端保存失败', true)
   },
 
@@ -858,11 +965,18 @@ Page({
   },
 
   onShareAppMessage() {
-    const items = this.data.menu.items
-    const summary = items.length > 0 ? items.map(i => i.name).join('、') : '还没有点菜'
+    const me = (wx.getStorageSync('userInfo') || {}).nickName || '我'
+    const partnerName = this.data.partnerName || 'TA'
+    const mySummary = this.data.myDishes.map(i => i.name).join('、') || '还没点'
+    const partnerSummary = this.data.otherDishes.map(i => i.name).join('、')
     const spaceName = this.data.spaceName || '菜菜手帐'
+    // 让对方一眼看到：我点了什么、TA点了什么
+    let title = `「${spaceName}」今日菜单：${me}点了[${mySummary}]`
+    if (partnerSummary) {
+      title += `；${partnerName}点了[${partnerSummary}]`
+    }
     return {
-      title: `「${spaceName}」今日菜单 - ${summary}`,
+      title,
       path: '/pages/space/space'
     }
   },

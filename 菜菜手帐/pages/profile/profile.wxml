@@ -5,7 +5,7 @@
     <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
       <image wx:if="{{avatarUrl}}" class="avatar-img" src="{{avatarUrl}}" mode="aspectFill" />
       <view wx:else class="avatar-placeholder">
-        <text class="avatar-char">{{nickName ? nickName.charAt(0) : '👤'}}</text>
+        <text class="avatar-char">{{nickInitial || '👤'}}</text>
       </view>
     </button>
 

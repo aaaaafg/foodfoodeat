@@ -144,6 +144,135 @@
   padding-bottom: 12px;
 }
 
+/* 今日统计条 */
+.today-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 16px 12px;
+}
+
+.stat-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.stat-num {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.stat-num.stat-mine { color: var(--primary); }
+.stat-num.stat-theirs { color: #ff6b81; }
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--separator);
+}
+
+/* 分组标题 */
+.section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 20px 8px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.section-count {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.section-edit {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--primary);
+  padding: 4px 8px;
+}
+
+.section-edit:active { opacity: 0.6; }
+
+.section-empty {
+  margin: 0 16px 8px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius);
+  border: 1px dashed var(--separator);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-empty-text {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.partner-add-btn {
+  font-size: 13px;
+  color: #ff6b81;
+  font-weight: 600;
+  padding: 6px 16px;
+  border-radius: 16px;
+  background: rgba(255, 107, 129, 0.08);
+}
+
+/* 添加菜品：帮我点 / 帮TA点 */
+.add-for-toggle {
+  display: flex;
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 20px;
+}
+
+.add-for-option {
+  flex: 1;
+  text-align: center;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-radius: 10px;
+  transition: all 0.15s ease;
+}
+
+.add-for-option:active { opacity: 0.7; }
+
+.add-for-active {
+  background: #ffffff;
+  color: var(--primary);
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.local-hint {
+  display: block;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 12px;
+  padding: 0 12px;
+}
+
 .dish-card {
   transition: transform 0.15s ease;
 }

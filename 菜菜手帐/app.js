@@ -64,8 +64,9 @@ App({
           spaceName: demoSpace.name,
           date: todayKey,
           items: [
-            { id: 'demo_1', name: '红烧排骨', note: '多放辣椒，少放盐', expanded: false, addedBy: '游客', addedAt: Date.now() },
-            { id: 'demo_2', name: '清炒时蔬', note: '', expanded: false, addedBy: '游客', addedAt: Date.now() }
+            { id: 'demo_1', name: '红烧排骨', note: '多放辣椒，少放盐', addedBy: '游客', addedByOpenid: 'guest_user', addedAt: Date.now() },
+            { id: 'demo_2', name: '清炒时蔬', note: '', addedBy: '游客', addedByOpenid: 'guest_user', addedAt: Date.now() },
+            { id: 'demo_3', name: '番茄炒蛋', note: '要甜口的', addedBy: 'TA', addedByOpenid: 'partner', addedAt: Date.now() }
           ],
           updatedAt: Date.now()
         }

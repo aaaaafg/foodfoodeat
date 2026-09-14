@@ -25,6 +25,7 @@
       <view class="history-header" bindtap="toggleExpand" data-date="{{item.date}}">
         <view class="history-header-left">
           <text class="history-date">{{item.formatted}}</text>
+          <text wx:if="{{item.peopleSummary}}" class="history-people">{{item.peopleSummary}}</text>
           <text wx:if="{{item.spaceName}}" class="history-card-space">{{item.spaceName}}</text>
         </view>
         <view class="history-header-right">

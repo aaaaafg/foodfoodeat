@@ -64,6 +64,7 @@ Page({
           ...entry,
           spaceName: entry.spaceName || '',
           formatted: this.formatDate(entry.date),
+          peopleSummary: this.peopleSummary(entry),
           expanded: false
         }))
         .sort((a, b) => b.date.localeCompare(a.date))
@@ -89,6 +90,7 @@ Page({
             ...entry,
             spaceName: entry.spaceName || '',
             formatted: this.formatDate(entry.date),
+            peopleSummary: this.peopleSummary(entry),
             expanded: false
           }))
         this._skip += items.length
@@ -124,6 +126,7 @@ Page({
             ...entry,
             spaceName: entry.spaceName || '',
             formatted: this.formatDate(entry.date),
+            peopleSummary: this.peopleSummary(entry),
             expanded: false
           }))
         this._skip += items.length
@@ -146,6 +149,16 @@ Page({
     const date = new Date(+y, +m - 1, +d)
     const weekDay = weekDays[date.getDay()]
     return `${y}年${m}月${d}日 星期${weekDay}`
+  },
+
+  // 这一天谁点了什么：按人统计，如「小明 3 道 · 小美 2 道」
+  peopleSummary(entry) {
+    const map = {}
+    ;(entry.items || []).forEach(it => {
+      const who = it.addedBy || '未标注'
+      map[who] = (map[who] || 0) + 1
+    })
+    return Object.keys(map).map(k => `${k} ${map[k]} 道`).join(' · ')
   },
 
   toggleExpand(e) {

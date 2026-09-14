@@ -3,7 +3,7 @@
   <view class="guest-banner" wx:if="{{isGuest}}" bindtap="goToProfile">
     <view class="guest-banner-inner">
       <text class="guest-banner-icon">👤</text>
-      <text class="guest-banner-text">登录后可解锁完整功能</text>
+      <text class="guest-banner-text">登录后菜单可多设备同步</text>
     </view>
     <text class="guest-banner-arrow">›</text>
   </view>
@@ -40,13 +40,54 @@
     <text class="space-entry-arrow">›</text>
   </view>
 
-  <!-- 菜品列表 -->
+  <!-- 菜品列表（按人分组：我点的 / TA点的） -->
   <scroll-view wx:if="{{menu.items.length > 0}}" class="menu-list" scroll-y enhanced show-scrollbar="{{false}}">
-    <view wx:for="{{menu.items}}" wx:key="id" class="dish-card card" data-id="{{item.id}}">
+    <!-- 今日统计 -->
+    <view class="today-stats card">
+      <view class="stat-col"><text class="stat-num">{{stats.total}}</text><text class="stat-label">今日共点</text></view>
+      <view class="stat-divider"></view>
+      <view class="stat-col"><text class="stat-num stat-mine">{{stats.mine}}</text><text class="stat-label">我点的</text></view>
+      <view class="stat-divider"></view>
+      <view class="stat-col"><text class="stat-num stat-theirs">{{stats.theirs}}</text><text class="stat-label">{{partnerName}}点的</text></view>
+    </view>
+
+    <!-- 我点的菜 -->
+    <view class="section-title-row">
+      <text class="section-title">👤 我点的菜</text>
+      <text class="section-count">{{stats.mine}} 道</text>
+    </view>
+    <view wx:if="{{myDishes.length === 0}}" class="section-empty">
+      <text class="section-empty-text">你今天还没点菜</text>
+    </view>
+    <view wx:for="{{myDishes}}" wx:key="id" class="dish-card card" data-id="{{item.id}}">
       <view class="dish-main">
         <view class="dish-info" bindtap="toggleNote" data-id="{{item.id}}">
           <text class="dish-name">{{item.name}}</text>
-          <text wx:if="{{item.addedBy}}" class="dish-added-by">{{item.addedBy}} 添加</text>
+          <text wx:if="{{item.note}}" class="dish-note-label">{{item.expanded ? '收起备注' : '查看备注'}}</text>
+        </view>
+        <view class="dish-delete" bindtap="deleteDish" data-id="{{item.id}}">
+          <text class="delete-icon">✕</text>
+        </view>
+      </view>
+      <view wx:if="{{item.note && item.expanded}}" class="dish-note-content card-note">
+        <text class="note-text">{{item.note}}</text>
+      </view>
+    </view>
+
+    <!-- TA 点的菜 -->
+    <view class="section-title-row">
+      <text class="section-title">💞 {{partnerName}}点的菜</text>
+      <text class="section-count">{{stats.theirs}} 道</text>
+      <text class="section-edit" catchtap="editPartnerName">改名字</text>
+    </view>
+    <view wx:if="{{otherDishes.length === 0}}" class="section-empty">
+      <text class="section-empty-text">{{partnerName}}还没点菜</text>
+      <button class="btn btn-ghost partner-add-btn" bindtap="addForPartner">帮{{partnerName}}点一道</button>
+    </view>
+    <view wx:for="{{otherDishes}}" wx:key="id" class="dish-card card" data-id="{{item.id}}">
+      <view class="dish-main">
+        <view class="dish-info" bindtap="toggleNote" data-id="{{item.id}}">
+          <text class="dish-name">{{item.name}}</text>
           <text wx:if="{{item.note}}" class="dish-note-label">{{item.expanded ? '收起备注' : '查看备注'}}</text>
         </view>
         <view class="dish-delete" bindtap="deleteDish" data-id="{{item.id}}">
@@ -99,7 +140,7 @@
           </view>
           <view class="space-actions-row">
             <text class="space-action-link" bindtap="showSpaceDetail" data-id="{{item._id}}">成员</text>
-            <text class="space-action-link" bindtap="showInvite" data-id="{{item._id}}">邀请</text>
+            <text wx:if="{{!isLocal}}" class="space-action-link" bindtap="showInvite" data-id="{{item._id}}">邀请</text>
             <text class="space-action-link danger" bindtap="showLeave" data-id="{{item._id}}">退出</text>
           </view>
         </view>
@@ -111,8 +152,9 @@
 
       <view class="form-buttons">
         <button class="btn btn-primary form-confirm" bindtap="startCreate">+ 创建</button>
-        <button class="btn btn-ghost form-confirm" bindtap="startJoin">🔗 加入</button>
+        <button wx:if="{{!isLocal}}" class="btn btn-ghost form-confirm" bindtap="startJoin">🔗 加入</button>
       </view>
+      <text wx:if="{{isLocal}}" class="local-hint">本地模式下，把今日菜单转发给TA即可互相知道点了什么</text>
     </view>
   </view>
 
@@ -120,6 +162,11 @@
   <view wx:if="{{showModal}}" class="modal-overlay" bindtap="hideAddModal">
     <view class="modal-content" catchtap="noop">
       <text class="modal-title">添加菜品</text>
+      <!-- 归属选择：帮我点 / 帮TA点 -->
+      <view class="add-for-toggle">
+        <view class="add-for-option {{addFor === 'me' ? 'add-for-active' : ''}}" bindtap="setAddForMe">帮我点</view>
+        <view class="add-for-option {{addFor === 'partner' ? 'add-for-active' : ''}}" bindtap="setAddForPartner">帮{{partnerName}}点</view>
+      </view>
       <view class="form-group">
         <text class="form-label">菜品名称</text>
         <input class="form-input" placeholder="例如：红烧排骨" value="{{newDishName}}" bindinput="onNameInput" maxlength="30" focus="{{showModal}}"/>
@@ -204,7 +251,7 @@
     <view class="modal-content" catchtap="noop">
       <text class="modal-title">{{selectedSpace.name}} · 成员</text>
       <view wx:for="{{members}}" wx:key="_id" class="member-item">
-        <view class="member-avatar"><text>{{item.nickName ? item.nickName.charAt(0) : '👤'}}</text></view>
+        <view class="member-avatar"><text>{{item.initial || '👤'}}</text></view>
         <text class="member-name">{{item.nickName}}</text>
         <text wx:if="{{item.role === 'owner'}}" class="member-tag">创建者</text>
       </view>
