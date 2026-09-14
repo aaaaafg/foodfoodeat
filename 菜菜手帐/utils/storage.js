@@ -19,11 +19,24 @@ function isGuest() {
   return !!(userInfo && userInfo._openid === 'guest_user')
 }
 
+// ========== 本地存储命名空间 ==========
+// 游客用 'guest'；登录用户云服务不可用时用 'offline_<openid>'，互不干扰
+function localNs(userInfo) {
+  if (!userInfo) userInfo = wx.getStorageSync('userInfo')
+  if (userInfo && userInfo._openid && userInfo._openid !== 'guest_user') {
+    return 'offline_' + userInfo._openid
+  }
+  return 'guest'
+}
+
+function menusKey(ns) { return (ns || 'guest') + '_menus' }
+function spacesKey(ns) { return (ns || 'guest') + '_spaces' }
+
 // ========== 游客模式 - 本地菜单数据 ==========
 
-function guestGetMenu(spaceId) {
+function guestGetMenu(spaceId, ns) {
   const todayKey = getTodayKey()
-  const allMenus = wx.getStorageSync('guest_menus') || {}
+  const allMenus = wx.getStorageSync(menusKey(ns)) || {}
   const key = spaceId + '_' + todayKey
   if (allMenus[key]) {
     return { doc: allMenus[key], docId: key }
@@ -31,9 +44,9 @@ function guestGetMenu(spaceId) {
   return { doc: null, docId: null }
 }
 
-function guestSaveMenu(spaceId, spaceName, items) {
+function guestSaveMenu(spaceId, spaceName, items, ns) {
   const todayKey = getTodayKey()
-  const allMenus = wx.getStorageSync('guest_menus') || {}
+  const allMenus = wx.getStorageSync(menusKey(ns)) || {}
   const key = spaceId + '_' + todayKey
   allMenus[key] = {
     spaceId,
@@ -42,11 +55,11 @@ function guestSaveMenu(spaceId, spaceName, items) {
     items,
     updatedAt: Date.now()
   }
-  wx.setStorageSync('guest_menus', allMenus)
+  wx.setStorageSync(menusKey(ns), allMenus)
 }
 
-function guestGetHistory(spaceId) {
-  const allMenus = wx.getStorageSync('guest_menus') || {}
+function guestGetHistory(spaceId, ns) {
+  const allMenus = wx.getStorageSync(menusKey(ns)) || {}
   const history = []
   for (const key in allMenus) {
     if (key.startsWith(spaceId + '_')) {
@@ -59,8 +72,8 @@ function guestGetHistory(spaceId) {
   return history.sort((a, b) => b.date.localeCompare(a.date))
 }
 
-function guestClearHistory(spaceId, target, clearDate) {
-  const allMenus = wx.getStorageSync('guest_menus') || {}
+function guestClearHistory(spaceId, target, clearDate, ns) {
+  const allMenus = wx.getStorageSync(menusKey(ns)) || {}
   const todayKey = getTodayKey()
   for (const key in allMenus) {
     if (key.startsWith(spaceId + '_')) {
@@ -71,17 +84,17 @@ function guestClearHistory(spaceId, target, clearDate) {
       }
     }
   }
-  wx.setStorageSync('guest_menus', allMenus)
+  wx.setStorageSync(menusKey(ns), allMenus)
 }
 
 // ========== 游客模式 - 空间管理 ==========
 
-function guestGetSpaces() {
-  return wx.getStorageSync('guest_spaces') || []
+function guestGetSpaces(ns) {
+  return wx.getStorageSync(spacesKey(ns)) || []
 }
 
-function guestCreateSpace(name, type) {
-  const spaces = guestGetSpaces()
+function guestCreateSpace(name, type, ns) {
+  const spaces = guestGetSpaces(ns)
   const inviteCode = Math.random().toString(36).slice(2, 8).toUpperCase()
   // 获取当前用户昵称
   const profile = getPersistentProfile() || {}
@@ -98,15 +111,15 @@ function guestCreateSpace(name, type) {
     members: [{ nickName, role: 'owner' }]
   }
   spaces.push(space)
-  wx.setStorageSync('guest_spaces', spaces)
+  wx.setStorageSync(spacesKey(ns), spaces)
   // 自动设为活跃空间
   wx.setStorageSync('activeSpaceId', space._id)
   wx.setStorageSync('spaceInfo_' + space._id, space)
   return space
 }
 
-function guestJoinSpace(code) {
-  const spaces = guestGetSpaces()
+function guestJoinSpace(code, ns) {
+  const spaces = guestGetSpaces(ns)
   const space = spaces.find(s => s.inviteCode === code.toUpperCase())
   if (!space) return null
   // 检查是否已在空间中
@@ -119,16 +132,16 @@ function guestJoinSpace(code) {
   space.memberCount += 1
   if (!space.members) space.members = []
   space.members.push({ nickName, role: 'member' })
-  wx.setStorageSync('guest_spaces', spaces)
+  wx.setStorageSync(spacesKey(ns), spaces)
   wx.setStorageSync('activeSpaceId', space._id)
   wx.setStorageSync('spaceInfo_' + space._id, space)
   return space
 }
 
-function guestLeaveSpace(spaceId) {
-  let spaces = guestGetSpaces()
+function guestLeaveSpace(spaceId, ns) {
+  let spaces = guestGetSpaces(ns)
   spaces = spaces.filter(s => s._id !== spaceId)
-  wx.setStorageSync('guest_spaces', spaces)
+  wx.setStorageSync(spacesKey(ns), spaces)
   const activeId = wx.getStorageSync('activeSpaceId')
   if (activeId === spaceId) {
     const newActive = spaces.length > 0 ? spaces[0]._id : ''
@@ -211,6 +224,7 @@ module.exports = {
   saveHistory,
   // 游客模式
   isGuest,
+  localNs,
   guestGetMenu,
   guestSaveMenu,
   guestGetHistory,

@@ -85,7 +85,7 @@ Page({
 
     // 昵称和头像已通过页面顶部的 chooseAvatar 按钮和 input 组件收集
     // 带重试的云函数调用
-    this.callFunctionWithRetry('getOpenid')
+    this.callFunctionWithRetry('getOpenid', 1)
       .then(res => {
         const openid = res.result.openid
         const db = wx.cloud.database()
@@ -128,9 +128,11 @@ Page({
             .catch(() => this.loginFail())
         })
       })
-      .catch(() => {
+      .catch(err => {
+        console.error('[login] 云函数调用失败:', err)
+        getApp().markCloudBroken()
         this.setData({ loading: false })
-        wx.showToast({ title: '网络错误，请检查云函数是否已部署', icon: 'none', duration: 2000 })
+        wx.showToast({ title: '云服务不可用（环境可能已过期），可先用本地模式体验', icon: 'none', duration: 3000 })
       })
   },
 

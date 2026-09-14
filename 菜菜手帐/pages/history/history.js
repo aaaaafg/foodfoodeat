@@ -10,16 +10,40 @@ Page({
     submitting: false,
     loading: false,
     hasMore: false,
-    pageSize: 20
+    pageSize: 20,
+    cloudOffline: false
   },
 
   onLoad() {
     this._guest = storage.isGuest()
+    this._cloudOffline = false
+    this._skip = 0
   },
 
   onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 1 })
+    }
+    // 每次显示重新读取游客/离线状态（退出登录、云端恢复后状态都会变化）
+    this._guest = storage.isGuest()
+    this._cloudOffline = !this._guest && !!getApp().globalData.cloudBroken
+    this.setData({ cloudOffline: this._cloudOffline })
+    this.refreshHistory()
+  },
+
+  // 本地存储命名空间
+  localNs() {
+    return storage.localNs()
+  },
+
+  // 云调用失败：标记云不可用并切换到本地历史
+  enterOfflineMode() {
+    console.warn('[history] 进入本地模式')
+    getApp().markCloudBroken()
+    if (!this._cloudOffline) {
+      this._cloudOffline = true
+      this.setData({ cloudOffline: true })
+      wx.showToast({ title: '云服务不可用，已切换本地模式', icon: 'none', duration: 2500 })
     }
     this.refreshHistory()
   },
@@ -33,9 +57,9 @@ Page({
     const spaceInfo = getApp().globalData.activeSpaceInfo
     this.setData({ spaceName: spaceInfo ? spaceInfo.name : '', loading: true, history: [] })
 
-    // 游客模式：从本地加载（数据量小，一次全加载）
-    if (this._guest) {
-      const history = (storage.guestGetHistory(activeId) || [])
+    // 游客/离线模式：从本地加载（数据量小，一次全加载）
+    if (this._guest || this._cloudOffline) {
+      const history = (storage.guestGetHistory(activeId, this.localNs()) || [])
         .map(entry => ({
           ...entry,
           spaceName: entry.spaceName || '',
@@ -73,13 +97,13 @@ Page({
       .catch(err => {
         console.error('[history] 加载失败:', err)
         this.setData({ loading: false })
-        wx.showToast({ title: '加载失败', icon: 'none' })
+        this.enterOfflineMode()
       })
   },
 
   // 加载更多（仅真实用户分页）
   loadMoreHistory() {
-    if (this._guest || !this.data.hasMore || this.data.loading) return
+    if (this._guest || this._cloudOffline || !this.data.hasMore || this.data.loading) return
     const activeId = getApp().globalData.activeSpaceId
     if (!activeId) return
 
@@ -112,7 +136,7 @@ Page({
       .catch(err => {
         console.error('[history] 加载更多失败:', err)
         this.setData({ loading: false })
-        wx.showToast({ title: '加载失败', icon: 'none' })
+        this.enterOfflineMode()
       })
   },
 
@@ -145,34 +169,35 @@ Page({
     this.setData({ submitting: true })
     const activeId = getApp().globalData.activeSpaceId
 
-    // 游客模式：本地清除
-    if (this._guest) {
-      storage.guestClearHistory(activeId, this.data.clearTarget, this.data.clearDate)
+    // 游客/离线模式：本地清除
+    if (this._guest || this._cloudOffline) {
+      storage.guestClearHistory(activeId, this.data.clearTarget, this.data.clearDate, this.localNs())
       this.finishClear(this.data.clearTarget === 'all' ? '已清空' : '已删除')
       return
     }
 
     const db = wx.cloud.database()
 
-    const doClear = () => {
+    // 循环分页删除：客户端 .get() 单次最多返回 20 条，
+    // 只删一批会漏掉 20 条之后的记录
+    const buildQuery = () => {
       if (this.data.clearTarget === 'all') {
         const today = getApp().getTodayKey()
-        return db.collection('menus')
-          .where({ spaceId: activeId, date: db.command.neq(today) })
-          .get()
-          .then(res => {
-            return Promise.all(res.data.map(d => db.collection('menus').doc(d._id).remove()))
-          })
+        return db.collection('menus').where({ spaceId: activeId, date: db.command.neq(today) })
       }
-      return db.collection('menus')
-        .where({ spaceId: activeId, date: this.data.clearDate })
-        .get()
-        .then(res => {
-          if (res.data.length > 0) {
-            return Promise.all(res.data.map(d => db.collection('menus').doc(d._id).remove()))
-          }
+      return db.collection('menus').where({ spaceId: activeId, date: this.data.clearDate })
+    }
+
+    const removePage = (res) => {
+      if (!res.data.length) return Promise.resolve()
+      return Promise.all(res.data.map(d => db.collection('menus').doc(d._id).remove()))
+        .then(() => {
+          // 重新查询下一页（删除后从头取即可）
+          return buildQuery().limit(100).get().then(next => removePage(next))
         })
     }
+
+    const doClear = () => buildQuery().limit(100).get().then(res => removePage(res))
 
     doClear()
       .then(() => {
@@ -181,7 +206,11 @@ Page({
       .catch(err => {
         console.error('[history] clear fail:', err)
         this.setData({ submitting: false })
-        wx.showToast({ title: '操作失败', icon: 'none' })
+        if (err && err.errMsg && /cloud|network|timeout|env/i.test(err.errMsg)) {
+          this.enterOfflineMode()
+        } else {
+          wx.showToast({ title: '操作失败', icon: 'none' })
+        }
       })
   },
 

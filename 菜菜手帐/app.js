@@ -2,12 +2,20 @@ App({
   globalData: {
     userInfo: null,
     activeSpaceId: '',
-    activeSpaceInfo: null
+    activeSpaceInfo: null,
+    // 云开发是否可用（环境被删除/过期、网络异常时置为 false）
+    cloudBroken: false
   },
 
   onLaunch() {
-    // 始终初始化云开发环境，确保游客也能调用云函数完成登录
-    wx.cloud.init({ traceUser: true })
+    // 初始化云开发环境；环境不存在/过期时 init 可能抛异常，必须保护，
+    // 否则整个小程序启动失败（白屏/超时）
+    try {
+      wx.cloud.init({ traceUser: true })
+    } catch (err) {
+      console.warn('[app] wx.cloud.init 失败（云环境可能已过期）:', err && err.message)
+      this.globalData.cloudBroken = true
+    }
 
     let userInfo = wx.getStorageSync('userInfo')
     // 无用户信息时自动创建游客身份
@@ -95,6 +103,22 @@ App({
   isGuest() {
     const userInfo = this.globalData.userInfo || wx.getStorageSync('userInfo')
     return !!(userInfo && userInfo._openid === 'guest_user')
+  },
+
+  // 云调用失败时由各页面调用，标记云服务不可用（进入本地降级模式）
+  markCloudBroken() {
+    if (!this.globalData.cloudBroken) {
+      this.globalData.cloudBroken = true
+      console.warn('[app] 云服务不可用，切换本地模式')
+    }
+  },
+
+  // 云调用恢复成功时清除标记
+  clearCloudBroken() {
+    if (this.globalData.cloudBroken) {
+      this.globalData.cloudBroken = false
+      console.log('[app] 云服务已恢复')
+    }
   },
 
   setActiveSpace(spaceId, spaceInfo) {

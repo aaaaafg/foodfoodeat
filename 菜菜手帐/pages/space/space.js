@@ -15,6 +15,8 @@ Page({
 
     // 游客模式
     isGuest: false,
+    // 云服务不可用时自动降级为本地模式
+    cloudOffline: false,
 
     // 空间
     spaceList: [],
@@ -43,13 +45,19 @@ Page({
   onLoad() {
     this._pageActive = true
     this._menuLoaded = false
+    this._lastSpaceId = null
     this._guest = storage.isGuest()
-    this.setData({ isGuest: this._guest })
-    this.loadMenu()
+    this._cloudOffline = false
+    // 菜单加载统一由 onShow 处理，避免 onLoad + onShow 双重加载
   },
 
   onShow() {
     this._pageActive = true
+    // 每次显示都重新读取游客状态：退出登录后会从真实用户变回游客，
+    // 若沿用旧状态会继续走云路径导致持续超时报错
+    this._guest = storage.isGuest()
+    this._cloudOffline = !this._guest && !!getApp().globalData.cloudBroken
+    this.setData({ isGuest: this._guest, cloudOffline: this._cloudOffline })
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 0 })
     }
@@ -79,13 +87,57 @@ Page({
   },
 
   onPullDownRefresh() {
-    this.loadMenu()
+    if (this._cloudOffline) {
+      // 离线模式下拉：尝试重连云端
+      this.retryCloud()
+    } else {
+      this.loadMenu()
+    }
     wx.stopPullDownRefresh()
   },
 
   onHide() {
     this._pageActive = false
     this.stopWatcher()
+  },
+
+  onUnload() {
+    this._pageActive = false
+    this.stopWatcher()
+  },
+
+  // ========== 本地模式辅助 ==========
+
+  // 本地存储命名空间：游客为 'guest'，登录用户离线为 'offline_<openid>'
+  localNs() {
+    return storage.localNs()
+  },
+
+  // 云调用失败时进入本地降级模式（幂等）
+  enterOfflineMode(reason, skipReload) {
+    console.warn('[space] 进入本地模式:', reason || '云调用失败')
+    getApp().markCloudBroken()
+    this.stopWatcher()
+    if (!this._cloudOffline) {
+      this._cloudOffline = true
+      this.setData({ cloudOffline: true })
+      wx.showToast({ title: '云服务不可用，已切换本地模式', icon: 'none', duration: 2500 })
+    }
+    if (!skipReload) {
+      this._menuLoaded = false
+      this.loadSpaces()
+    }
+  },
+
+  // 手动重试恢复云端连接
+  retryCloud() {
+    const app = getApp()
+    app.clearCloudBroken()
+    this._cloudOffline = false
+    this.setData({ cloudOffline: false })
+    this.stopWatcher()
+    this._menuLoaded = false
+    this.loadSpaces()
   },
 
   // ========== 登录/空间检查 ==========
@@ -98,8 +150,8 @@ Page({
       this._redirecting = false
       return true
     }
-    // 游客模式下：有用户即可，无空间也可浏览（会引导创建）
-    if (this._guest) {
+    // 游客模式/离线本地模式：有用户即可，无空间也可浏览（会引导创建）
+    if (this._guest || this._cloudOffline) {
       this._redirecting = false
       return true
     }
@@ -124,9 +176,9 @@ Page({
     this._menuLoaded = true
     this.updateDateDisplay(todayKey)
 
-    // 游客模式：从本地存储加载
-    if (this._guest) {
-      const { doc } = storage.guestGetMenu(activeId)
+    // 游客/离线模式：从本地存储加载
+    if (this._guest || this._cloudOffline) {
+      const { doc } = storage.guestGetMenu(activeId, this.localNs())
       if (doc) {
         this.setData({
           menu: { date: doc.date, items: doc.items || [] },
@@ -148,7 +200,9 @@ Page({
       .where({ spaceId: activeId, date: todayKey })
       .get()
       .then(res => {
-        // Guard: space may have changed while query was in-flight
+        // Guard: space may have changed while query was in-flight;
+        // 已降级本地模式时忽略迟到的云端结果
+        if (this._cloudOffline) return
         if (getApp().globalData.activeSpaceId !== activeId) return
         if (res.data.length > 0) {
           const doc = res.data[0]
@@ -187,6 +241,7 @@ Page({
       .catch(err => {
         console.error('[space] load fail:', err)
         this.setData({ watcherReady: true })
+        this.enterOfflineMode('菜单加载失败: ' + (err && err.errMsg ? err.errMsg : ''))
       })
   },
 
@@ -201,12 +256,14 @@ Page({
   },
 
   startWatcher() {
-    if (this._guest) return
+    if (this._guest || this._cloudOffline) return
     this.stopWatcher()
     const activeId = getApp().globalData.activeSpaceId
     if (!activeId) return
     const todayKey = getApp().getTodayKey()
     const db = wx.cloud.database()
+
+    this._watcherFailCount = 0
 
     this._watcher = db.collection('menus')
       .where({ spaceId: activeId, date: todayKey })
@@ -217,6 +274,7 @@ Page({
             this.stopWatcher()
             return
           }
+          this._watcherFailCount = 0
           if (snapshot.docs.length > 0) {
             const doc = snapshot.docs[0]
             if (doc.items) {
@@ -236,9 +294,18 @@ Page({
           console.error('[space] watcher error:', err)
           if (!this._pageActive) return
           this.stopWatcher()
+          this._watcherFailCount = (this._watcherFailCount || 0) + 1
+          // 连续失败 3 次说明云服务不可用（环境过期/网络中断），
+          // 降级本地模式并停止无限重试，避免报错风暴
+          if (this._watcherFailCount >= 3) {
+            this.enterOfflineMode('实时监听连续失败')
+            return
+          }
           if (!this._pageActive) return
-          setTimeout(() => {
+          this._watcherTimer = setTimeout(() => {
+            this._watcherTimer = null
             if (!this._pageActive) return
+            if (this._cloudOffline) return
             if (getApp().globalData.activeSpaceId === activeId) {
               this.startWatcher()
             }
@@ -248,6 +315,10 @@ Page({
   },
 
   stopWatcher() {
+    if (this._watcherTimer) {
+      clearTimeout(this._watcherTimer)
+      this._watcherTimer = null
+    }
     if (this._watcher) {
       try {
         this._watcher.close()
@@ -265,9 +336,10 @@ Page({
     const userInfo = wx.getStorageSync('userInfo')
     if (!userInfo || !userInfo._openid) return
 
-    // 游客模式：从本地存储加载
-    if (this._guest) {
-      const spaces = storage.guestGetSpaces()
+    // 游客/离线模式：从本地存储加载
+    if (this._guest || this._cloudOffline) {
+      const ns = this.localNs()
+      const spaces = storage.guestGetSpaces(ns)
       const activeId = wx.getStorageSync('activeSpaceId')
       let validActiveId = activeId && spaces.find(s => s._id === activeId) ? activeId : (spaces[0] ? spaces[0]._id : '')
       const active = spaces.find(s => s._id === validActiveId)
@@ -278,6 +350,8 @@ Page({
       })
       if (validActiveId && active) {
         getApp().setActiveSpace(validActiveId, active)
+      } else {
+        getApp().setActiveSpace('', null)
       }
       const spaceChanged = validActiveId !== this._lastMenuSpaceId
       if (spaceChanged || !this._menuLoaded) {
@@ -291,6 +365,8 @@ Page({
     const db = wx.cloud.database()
     db.collection('space_members').where({ _openid: userInfo._openid }).get()
       .then(res => {
+        // 已降级本地模式：忽略迟到的云端结果
+        if (this._cloudOffline) return
         const memberEntries = res.data
         if (memberEntries.length === 0) {
           this.setData({ spaceList: [], activeSpaceId: '', spaceName: '' })
@@ -331,8 +407,9 @@ Page({
           })
           .catch(() => {})
       })
-      .catch(() => {
-        wx.showToast({ title: '加载空间失败', icon: 'none' })
+      .catch(err => {
+        console.error('[space] 加载空间失败:', err)
+        this.enterOfflineMode('加载空间失败')
       })
   },
 
@@ -372,7 +449,7 @@ Page({
   hideMembers() { this.setData({ showMembers: false }) },
 
   fetchMembers(spaceId) {
-    if (this._guest) {
+    if (this._guest || this._cloudOffline) {
       // 从空间的 members 数组读取，若无则从用户信息构造
       const space = this.data.spaceList.find(s => s._id === spaceId)
       const userInfo = wx.getStorageSync('userInfo')
@@ -411,9 +488,9 @@ Page({
     if (!name) { wx.showToast({ title: '请输入空间名称', icon: 'none' }); return }
     this.setData({ submitting: true })
 
-    // 游客模式：本地创建
-    if (this._guest) {
-      const space = storage.guestCreateSpace(name, this.data.spaceType || 'custom')
+    // 游客/离线模式：本地创建
+    if (this._guest || this._cloudOffline) {
+      const space = storage.guestCreateSpace(name, this.data.spaceType || 'custom', this.localNs())
       const list = [...this.data.spaceList, space]
       this.stopWatcher()
       this.setData({ showCreate: false, spaceList: list, activeSpaceId: space._id, spaceName: name, submitting: false })
@@ -449,12 +526,12 @@ Page({
         console.error('创建成员记录失败:', err)
         db.collection('spaces').doc(spaceId).remove().catch(() => {})
         this.setData({ submitting: false })
-        wx.showToast({ title: '创建失败，请重试', icon: 'none' })
+        this.enterOfflineMode('创建空间失败')
       })
     }).catch(err => {
       console.error('创建空间失败:', err)
       this.setData({ submitting: false })
-      wx.showToast({ title: '创建失败，请重试', icon: 'none' })
+      this.enterOfflineMode('创建空间失败')
     })
   },
 
@@ -469,9 +546,9 @@ Page({
     if (!code) { wx.showToast({ title: '请输入邀请码', icon: 'none' }); return }
     this.setData({ submitting: true })
 
-    // 游客模式：本地加入
-    if (this._guest) {
-      const result = storage.guestJoinSpace(code)
+    // 游客/离线模式：本地加入
+    if (this._guest || this._cloudOffline) {
+      const result = storage.guestJoinSpace(code, this.localNs())
       if (!result) {
         this.setData({ submitting: false })
         wx.showToast({ title: '邀请码无效', icon: 'none' })
@@ -535,7 +612,7 @@ Page({
       .catch(err => {
         console.error('加入空间失败:', err)
         this.setData({ submitting: false })
-        wx.showToast({ title: '加入失败，请重试', icon: 'none' })
+        this.enterOfflineMode('加入空间失败')
       })
   },
 
@@ -565,10 +642,10 @@ Page({
     if (this.data.submitting) return
     this.setData({ submitting: true })
 
-    // 游客模式：本地退出
-    if (this._guest) {
+    // 游客/离线模式：本地退出
+    if (this._guest || this._cloudOffline) {
       const spaceId = this.data.selectedSpace._id
-      const list = storage.guestLeaveSpace(spaceId)
+      const list = storage.guestLeaveSpace(spaceId, this.localNs())
       const newActiveId = wx.getStorageSync('activeSpaceId')
       const newActive = list.find(s => s._id === newActiveId) || null
       this.setData({
@@ -626,7 +703,7 @@ Page({
       .catch(err => {
         console.error('退出空间失败:', err)
         this.setData({ submitting: false })
-        wx.showToast({ title: '操作失败', icon: 'none' })
+        this.enterOfflineMode('退出空间失败')
       })
   },
 
@@ -704,10 +781,10 @@ Page({
     }
     const spaceInfo = getApp().globalData.activeSpaceInfo
 
-    // 游客模式：存本地
-    if (this._guest) {
-      storage.guestSaveMenu(spaceId, spaceInfo ? spaceInfo.name : '', items)
-      console.log('[space] guest save ok')
+    // 游客/离线模式：存本地
+    if (this._guest || this._cloudOffline) {
+      storage.guestSaveMenu(spaceId, spaceInfo ? spaceInfo.name : '', items, this.localNs())
+      console.log('[space] local save ok')
       return
     }
 
@@ -723,7 +800,7 @@ Page({
         })
         .catch(err => {
           console.error('[space] save fail:', err)
-          wx.showToast({ title: '保存失败，请重试', icon: 'none' })
+          this.saveFailFallback(spaceId, spaceInfo, items)
         })
       return
     }
@@ -743,7 +820,7 @@ Page({
             console.log('[space] save ok (merged), docId:', doc._id)
           }).catch(err => {
             console.error('[space] save fail:', err)
-            wx.showToast({ title: '保存失败，请重试', icon: 'none' })
+            this.saveFailFallback(spaceId, spaceInfo, items)
           })
           if (res.data.length > 1) {
             const delIds = res.data.slice(1).map(d => d._id)
@@ -757,14 +834,20 @@ Page({
             })
             .catch(err => {
               console.error('[space] save fail:', err)
-              wx.showToast({ title: '保存失败，请重试', icon: 'none' })
+              this.saveFailFallback(spaceId, spaceInfo, items)
             })
         }
       })
       .catch(err => {
         console.error('[space] save fail:', err)
-        wx.showToast({ title: '保存失败，请重试', icon: 'none' })
+        this.saveFailFallback(spaceId, spaceInfo, items)
       })
+  },
+
+  // 云保存失败：先写入本地兜底，再切换离线模式，避免用户数据丢失
+  saveFailFallback(spaceId, spaceInfo, items) {
+    storage.guestSaveMenu(spaceId, spaceInfo ? spaceInfo.name : '', items, this.localNs())
+    this.enterOfflineMode('云端保存失败', true)
   },
 
   // ========== 分享 ==========

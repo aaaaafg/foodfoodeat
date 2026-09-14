@@ -26,6 +26,7 @@ Page({
       // 无用户信息（app.js 已保证不会发生，但保留兜底）
       return
     }
+    const cloudBroken = !!getApp().globalData.cloudBroken
 
     // 游客模式：直接使用本地数据
     if (storage.isGuest()) {
@@ -35,6 +36,19 @@ Page({
         nickName: userInfo.nickName || '游客',
         spaceCount: (wx.getStorageSync('guest_spaces') || []).length,
         isGuest: true,
+        enableNotify: false
+      })
+      return
+    }
+
+    // 云服务不可用：直接使用本地缓存，不发起云请求（避免报错风暴）
+    if (cloudBroken) {
+      this.setData({
+        userInfo,
+        avatarUrl: userInfo.avatarUrl || '',
+        nickName: userInfo.nickName || '未命名',
+        spaceCount: (wx.getStorageSync('offline_' + userInfo._openid + '_spaces') || []).length,
+        isGuest: false,
         enableNotify: false
       })
       return
@@ -59,12 +73,16 @@ Page({
         }
       })
       .catch(() => {
+        getApp().markCloudBroken()
         this.setData({ userInfo, nickName: userInfo.nickName || '未命名' })
       })
 
     db.collection('space_members').where({ _openid: userInfo._openid }).count()
       .then(res => this.setData({ spaceCount: res.total || 0 }))
-      .catch(() => {})
+      .catch(() => {
+        getApp().markCloudBroken()
+        this.setData({ spaceCount: (wx.getStorageSync('offline_' + userInfo._openid + '_spaces') || []).length })
+      })
 
     this.setData({ enableNotify: !!wx.getStorageSync('notifyEnabled') })
   },
@@ -76,6 +94,12 @@ Page({
     // 游客模式：本地头像，转为 base64 持久化存储
     if (storage.isGuest()) {
       this.persistGuestAvatar(avatarUrl)
+      return
+    }
+    // 云服务不可用：头像转 base64 存本机
+    if (getApp().globalData.cloudBroken) {
+      this.persistGuestAvatar(avatarUrl)
+      wx.showToast({ title: '云服务不可用，头像仅保存在本机', icon: 'none' })
       return
     }
     // 真实用户：上传到云存储
@@ -90,7 +114,10 @@ Page({
       storage.savePersistentProfile({ avatarUrl: fileID })
       wx.showToast({ title: '头像已更新', icon: 'success' })
     }).catch(() => {
-      wx.showToast({ title: '上传失败', icon: 'none' })
+      getApp().markCloudBroken()
+      // 上传失败：转 base64 存本机，头像不丢失
+      this.persistGuestAvatar(avatarUrl)
+      wx.showToast({ title: '云端上传失败，已保存在本机', icon: 'none' })
     })
   },
 
@@ -152,10 +179,17 @@ Page({
     if (storage.isGuest()) return
     const userInfo = this.data.userInfo
     if (!userInfo || !userInfo._id) return
+    if (getApp().globalData.cloudBroken) {
+      wx.showToast({ title: '已保存在本机（云端同步失败）', icon: 'none' })
+      return
+    }
     const db = wx.cloud.database()
     db.collection('users').doc(userInfo._id).update({
       data: { [field]: value, updatedAt: Date.now() }
-    }).catch(() => {})
+    }).catch(() => {
+      getApp().markCloudBroken()
+      wx.showToast({ title: '已保存在本机（云端同步失败）', icon: 'none' })
+    })
   },
 
   // 游客跳转登录页
@@ -192,8 +226,16 @@ Page({
       wx.showToast({ title: '游客模式不支持通知', icon: 'none' })
       return
     }
-    // 替换为微信公众平台申请的订阅消息模板ID
+    // 未申请订阅消息模板前占位，避免用占位 ID 调用接口必然失败
     const TMPL_ID = 'YOUR_TEMPLATE_ID_HERE'
+    if (!TMPL_ID || TMPL_ID === 'YOUR_TEMPLATE_ID_HERE') {
+      wx.showToast({ title: '通知功能即将上线', icon: 'none' })
+      return
+    }
+    if (getApp().globalData.cloudBroken) {
+      wx.showToast({ title: '云服务不可用，暂无法订阅通知', icon: 'none' })
+      return
+    }
     wx.requestSubscribeMessage({
       tmplIds: [TMPL_ID],
       success: (res) => {

@@ -24,7 +24,6 @@
       { "pagePath": "pages/profile/profile", "text": "用户中心" }
     ]
   },
-  "cloud": true,
-  "style": "v2",
-  "sitemapLocation": "sitemap.json"
+  "sitemapLocation": "sitemap.json",
+  "style": "v2"
 }

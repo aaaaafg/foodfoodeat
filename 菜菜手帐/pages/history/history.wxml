@@ -1,6 +1,14 @@
 <!-- 历史记录页面 -->
 <view class="container">
 
+  <!-- 云服务不可用提示条 -->
+  <view class="offline-banner" wx:if="{{cloudOffline}}">
+    <view class="offline-banner-inner">
+      <text class="offline-banner-icon">⚠️</text>
+      <text class="offline-banner-text">云服务不可用，正在展示本机保存的历史记录</text>
+    </view>
+  </view>
+
   <!-- 有历史记录 -->
   <scroll-view wx:if="{{history.length > 0}}" class="history-list" scroll-y enhanced show-scrollbar="{{false}}">
     <!-- 空间标签 -->

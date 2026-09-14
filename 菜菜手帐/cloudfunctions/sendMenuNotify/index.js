@@ -2,11 +2,17 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
-// 替换为微信公众平台申请的订阅消息模板ID
+// TODO: 在微信公众平台申请「订阅消息」模板后，把模板 ID 填到这里，
+// 并把 config.json 中的定时触发器加回来（当前已关闭，避免空跑报错）
 const TEMPLATE_ID = 'YOUR_TEMPLATE_ID_HERE'
 const DEBOUNCE_MS = 15 * 60 * 1000 // 15分钟
 
 exports.main = async (event) => {
+  // 模板未配置：直接返回，不发无效请求
+  if (!TEMPLATE_ID || TEMPLATE_ID === 'YOUR_TEMPLATE_ID_HERE') {
+    return { success: false, error: 'TEMPLATE_ID not configured' }
+  }
+
   const now = Date.now()
   const threshold = now - DEBOUNCE_MS
 

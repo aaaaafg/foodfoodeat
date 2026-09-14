@@ -8,14 +8,23 @@
     <text class="guest-banner-arrow">›</text>
   </view>
 
+  <!-- 云服务不可用提示条（云环境过期/网络异常时自动降级本地模式） -->
+  <view class="offline-banner" wx:if="{{cloudOffline}}">
+    <view class="offline-banner-inner">
+      <text class="offline-banner-icon">⚠️</text>
+      <text class="offline-banner-text">云服务不可用，已切换本地模式（数据保存在本机）</text>
+    </view>
+    <text class="offline-banner-action" catchtap="retryCloud">重试</text>
+  </view>
+
   <!-- 日期头部 -->
   <view class="date-header">
     <view class="date-info">
       <text class="date-text">{{todayDate}}</text>
       <text class="date-weekday">{{todayWeekday}}</text>
     </view>
-    <button class="share-btn" open-type="share">
-      <text class="share-icon">↗</text>
+    <button class="share-btn" open-type="share" hover-class="share-btn-hover">
+      <image class="share-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMwMDdhZmYiIHN0cm9rZS13aWR0aD0iMi4yIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik00IDEydjdhMiAyIDAgMCAwIDIgMmgxMmEyIDIgMCAwIDAgMi0ydi03Ii8+PHBhdGggZD0iTTE2IDZsLTQtNC00IDQiLz48cGF0aCBkPSJNMTIgMnYxMyIvPjwvc3ZnPg==" mode="aspectFit" />
     </button>
   </view>
 
